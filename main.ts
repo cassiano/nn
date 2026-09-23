@@ -2,6 +2,8 @@ import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
 
 const main = async () => {
+  let networkCost = 0
+
   const loader = new MnistLoader()
   await loader.load(console.log)
 
@@ -31,15 +33,20 @@ const main = async () => {
     },
   ])
 
-  // Get 1st training sample.
-  network.setInputs(
-    loader.getTrainingData().inputs[0],
-    loader.getTrainingData().labels[0],
-  )
+  const images = loader.getTrainingData().inputs
+  const labels = loader.getTrainingData().labels
 
-  network.forward()
+  // Process all training samples.
+  for (let i = 0; i < images.length; i++) {
+    network.setInputs(images[i], labels[i])
+    network.feedForward()
 
-  console.log(network.cost())
+    networkCost = (networkCost * i + network.cost()) / (i + 1)
+
+    if ((i + 1) % 1000 === 0) console.log({ count: i + 1, networkCost })
+  }
+
+  console.log({ finalNetworkCost: networkCost })
 }
 
 await main()

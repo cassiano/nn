@@ -17,7 +17,7 @@ export type Layer = {
   size: number
   w?: number[][] // Weights matrix for the layer (size x previous layer size)
   b?: number[] // Bias vector for the layer (size)
-  z?: number[] // Pre-activation values (size). z(𝓁) = w(𝓁) * a(𝓁-1) + b(𝓁)
+  z?: number[] // Pre-activation values (size)
   a: number[] // Activation values (size)
   σ?: ActivationFnType
 }
@@ -43,9 +43,9 @@ export class Network {
     this.y = timesMap(10, i => (i === label ? 1 : 0))
   }
 
-  forward() {
+  feedForward() {
     for (let i = 1; i < this.layers.length; i++) {
-      console.log(`Processing layer ${i}: ${this.layers[i].name}`)
+      // console.log(`Processing layer ${i}: ${this.layers[i].name}`)
 
       const currentLayer = this.layers[i]
       const previousLayer = this.layers[i - 1]
