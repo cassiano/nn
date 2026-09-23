@@ -1,3 +1,4 @@
+import { NumericMatrix } from './types.ts'
 export const map = (
   value: number,
   lower: number,
@@ -159,9 +160,9 @@ export const fromMatrix = (matrix: number[][]): number[] =>
   matrix.map(row => row[0])
 
 export const addMatrices = (
-  left: number[][],
-  right: number[][],
-): number[][] => {
+  left: NumericMatrix,
+  right: NumericMatrix,
+): NumericMatrix => {
   const colsLeft = left[0].length
   const colsRight = right[0].length
   const rowsLeft = left.length
@@ -177,23 +178,22 @@ export const addMatrices = (
       `Number of rows from left matrix (${rowsLeft}) must match number of rows from right one (${rowsRight})`,
     )
 
-  const result: number[][] = []
+  const result: NumericMatrix = []
 
   for (let row = 0; row < rowsLeft; row++) {
     result[row] = []
 
-    for (let col = 0; col < colsRight; col++) {
+    for (let col = 0; col < colsRight; col++)
       result[row][col] = left[row][col] + right[row][col]
-    }
   }
 
   return result
 }
 
 export const multiplyMatrices = (
-  left: number[][],
-  right: number[][],
-): number[][] => {
+  left: NumericMatrix,
+  right: NumericMatrix,
+): NumericMatrix => {
   const colsLeft = left[0].length
   const colsRight = right[0].length
   const rowsLeft = left.length
@@ -204,7 +204,7 @@ export const multiplyMatrices = (
       `Number of columns from left matrix (${colsLeft}) must match number of rows from right one (${rowsRight})`,
     )
 
-  const result: number[][] = []
+  const result: NumericMatrix = []
 
   for (let row = 0; row < rowsLeft; row++) {
     result[row] = []
