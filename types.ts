@@ -16,9 +16,12 @@ export type ActivationFnType = 'sigmoid' | 'relu' | 'tanh' | 'softmax'
 export type Layer = {
   name: string
   size: number
-  w?: NumericMatrix // Weights matrix for the layer [size][previous layer size]
-  b?: NumericVector // Bias vector for the layer [size]
-  z?: NumericVector // Pre-activation values [size]
   a: NumericVector // Activation values [size]
-  σ?: ActivationFnType
+}
+
+export type ParameterizedLayer = Layer & {
+  w: NumericMatrix // Weights matrix for the layer [size][previous layer size]
+  b: NumericVector // Bias vector for the layer [size]
+  z: NumericVector // Pre-activation values [size]
+  σ: ActivationFnType
 }

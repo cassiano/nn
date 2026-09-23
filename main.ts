@@ -16,20 +16,29 @@ const main = async () => {
     {
       name: 'Hidden Layer 1',
       size: 16,
-      σ: 'sigmoid',
       a: [],
+      w: [],
+      b: [],
+      z: [],
+      σ: 'sigmoid',
     },
     {
       name: 'Hidden Layer 2',
       size: 16,
-      σ: 'relu',
       a: [],
+      w: [],
+      b: [],
+      z: [],
+      σ: 'relu',
     },
     {
       name: 'Output Layer',
       size: 10,
-      σ: 'softmax',
       a: [],
+      w: [],
+      b: [],
+      z: [],
+      σ: 'softmax',
     },
   ])
 

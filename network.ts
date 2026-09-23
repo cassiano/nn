@@ -1,46 +1,66 @@
 import {
   random,
   timesMap,
-  assertIsNotUndefined,
   fromMatrix,
   addMatrices,
   multiplyMatrices,
   toMatrix,
   timesMapN,
 } from './utils.ts'
-import { sigmoid, relu, tanh } from './activation.ts'
+import {
+  sigmoid,
+  relu,
+  tanh,
+  sigmoidDeriv,
+  reluDeriv,
+  tanhDeriv,
+} from './activation.ts'
 import { softmax } from './activation.ts'
-import { Layer, NumericVector } from './types.ts'
+import { ParameterizedLayer, NumericVector, Layer } from './types.ts'
 import { MNIST_OUTPUT_SIZE } from './constants.ts'
+import { timesForEachN } from './utils.ts'
 
 export class Network {
-  y: NumericVector = [] // Expected values
+  y: NumericVector = [] // Expected values for the current sample
 
-  constructor(public layers: Layer[]) {
-    if (this.layers[this.layers.length - 1].size !== MNIST_OUTPUT_SIZE)
+  constructor(public layers: [Layer, ...ParameterizedLayer[]]) {
+    if (layers[layers.length - 1].size !== MNIST_OUTPUT_SIZE)
       throw new Error(
-        `Expected output layer size of ${MNIST_OUTPUT_SIZE} but got ${this.layers[this.layers.length - 1].size}`,
+        `Expected output layer size of ${MNIST_OUTPUT_SIZE} but got ${layers[layers.length - 1].size}`,
       )
 
     // Fill weights and biases of all but the input layer with random data.
-    for (let i = 1; i < this.layers.length; i++) {
-      this.layers[i].w = timesMapN(
-        [this.layers[i].size, layers[i - 1].size],
-        () => random(-1, 1),
+    for (let i = 0; i < this.parameterizedLayers.length; i++) {
+      const previousLayer =
+        i === 0 ? this.inputLayer : this.parameterizedLayers[i - 1]
+      const currentLayer = this.parameterizedLayers[i]
+
+      currentLayer.w = timesMapN([currentLayer.size, previousLayer.size], () =>
+        random(-1, 1),
       )
 
-      this.layers[i].b = timesMap(this.layers[i].size, () => random(-1, 1))
+      currentLayer.b = timesMap(currentLayer.size, () => random(-1, 1))
     }
   }
 
+  get inputLayer() {
+    return this.layers[0]
+  }
+
+  get parameterizedLayers() {
+    return this.layers.slice(1) as ParameterizedLayer[]
+  }
+
+  get outputLayer() {
+    return this.layers[this.layers.length - 1] as ParameterizedLayer
+  }
+
   get parameterCount() {
-    return this.layers
-      .slice(1)
-      .reduce(
-        (count, layer) =>
-          count + layer.w!.length * layer.w![0].length + layer.b!.length,
-        0,
-      )
+    return this.parameterizedLayers.reduce(
+      (count, layer) =>
+        count + layer.w.length * layer.w[0].length + layer.b.length,
+      0,
+    )
   }
 
   loadSample(inputs: number[], label: number) {
@@ -55,15 +75,12 @@ export class Network {
   }
 
   feedForward() {
-    for (let i = 1; i < this.layers.length; i++) {
+    for (let i = 0; i < this.parameterizedLayers.length; i++) {
       // console.log(`Processing layer ${i}: ${this.layers[i].name}`)
 
-      const currentLayer = this.layers[i]
-      const previousLayer = this.layers[i - 1]
-
-      assertIsNotUndefined(currentLayer.σ)
-      assertIsNotUndefined(currentLayer.w)
-      assertIsNotUndefined(currentLayer.b)
+      const previousLayer =
+        i === 0 ? this.inputLayer : this.parameterizedLayers[i - 1]
+      const currentLayer = this.parameterizedLayers[i]
 
       // z(𝓁) = w(𝓁) * a(𝓁-1) + b(𝓁)
       currentLayer.z = fromMatrix(
@@ -92,14 +109,6 @@ export class Network {
         }
       }
     }
-  }
-
-  get inputLayer() {
-    return this.layers[0]
-  }
-
-  get outputLayer() {
-    return this.layers[this.layers.length - 1]
   }
 
   // C = ∑(y - a(𝐋))²
