@@ -8,12 +8,15 @@ const main = async () => {
   const loader = new MnistLoader()
   await loader.load(console.log)
 
-  const network = new Network([
-    new Layer('Input Layer', 784),
-    new Layer('Hidden Layer 1', 16, 'sigmoid'),
-    new Layer('Hidden Layer 2', 16, 'relu'),
-    new Layer('Output Layer', 10, 'softmax'),
-  ])
+  const network = new Network(
+    [
+      new Layer('Input Layer', 784),
+      new Layer('Hidden Layer 1', 16, 'sigmoid'),
+      new Layer('Hidden Layer 2', 16, 'relu'),
+      new Layer('Output Layer', 10, 'softmax'),
+    ],
+    0.01,
+  )
 
   console.log({ parameterCount: network.parameterCount })
 

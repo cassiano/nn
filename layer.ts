@@ -35,7 +35,7 @@ export class Layer {
   constructor(
     public name: string,
     public size: number,
-    public σ: ActivationFunctionType = 'none',
+    public σ: ActivationFunctionType = 'none', // Activation function (greek letter sigma)
   ) {}
 
   initializeParameters(previousLayer: Layer) {

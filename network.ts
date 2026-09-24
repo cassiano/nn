@@ -6,7 +6,10 @@ import { Layer } from './layer.ts'
 export class Network {
   y: NumericVector = [] // Expected values for the current sample
 
-  constructor(public layers: Layer[]) {
+  constructor(
+    public layers: Layer[],
+    public η: number, // Learning rate (greek letter eta)
+  ) {
     if (layers[layers.length - 1].size !== MNIST_OUTPUT_SIZE)
       throw new Error(
         `Expected output layer size of ${MNIST_OUTPUT_SIZE} but got ${layers[layers.length - 1].size}`,
