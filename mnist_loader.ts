@@ -17,6 +17,12 @@ const MNIST_PATHS = {
   testLabels: './mnist/t10k-labels-idx1-ubyte.zip',
 }
 
+/**
+ * Downloads (from local .zip files bundled in ./mnist) and parses the MNIST
+ * dataset, exposed as {@link TrainingData} in `trainData` / `testData`.
+ *
+ * The raw files are gzipped IDX binaries; pixels are normalized to [0, 1].
+ */
 export class MnistLoader {
   trainData: TrainingData | null = null
   testData: TrainingData | null = null

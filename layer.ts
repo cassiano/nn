@@ -27,10 +27,21 @@ export type ActivationFunctionType =
   | 'tanh'
   | 'softmax'
 
+/**
+ * A single layer of a {@link Network}: a fixed-size group of neurons.
+ *
+ * Stores the layer's trainable parameters and intermediate values:
+ * - w: weight matrix ([size][previous layer size]), random in (-1, 1) at init
+ * - b: bias vector ([size]), random in (-1, 1) at init
+ * - z: pre-activation values z(𝓁) = w(𝓁)·a(𝓁-1) + b(𝓁)
+ * - a: post-activation values, obtained by applying σ to z
+ *
+ * The first (input) layer is a special case: it only stores the raw inputs in
+ * `a` and completely ignores w, b, z and σ.
+ */
 export class Layer {
-  // Notice that the props `w`, `b`, `z` and `σ` are completely ignored by the 1st (input) layer.
   𝓁: number
-  a: NumericVector = [] // Activation values ([size])
+  a: NumericVector = [] // Post-activation values ([size])
   w: NumericMatrix = [] // Weights ([size][previous layer size])
   b: NumericVector = [] // Biases ([size])
   z: NumericVector = [] // Pre-activation values ([size])

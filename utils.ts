@@ -1,4 +1,12 @@
 import { NumericMatrix } from './types.ts'
+
+/**
+ * Re-maps a `value` from the range [lower, higher] to the range
+ * [projectedLower, projectedUpper]. Optionally clamps the output to the target
+ * range when `withinBounds` is true (any input outside the source range is
+ * snapped to the nearest endpoint). Used e.g. to turn a pixel brightness in
+ * [0, 1] into an index into a Unicode character gradient.
+ */
 export const map = (
   value: number,
   lower: number,
@@ -7,6 +15,7 @@ export const map = (
   projectedUpper: number,
   withinBounds = false,
 ) => {
+  // Clamp input when withinBounds is set. Handles inverted source ranges too.
   if (withinBounds) {
     if (lower <= higher) {
       if (value <= lower) return projectedLower
@@ -18,16 +27,25 @@ export const map = (
     }
   }
 
+  // Linear interpolation: map(value) = ((value - lower) / span) * span + offset
   return (
     ((value - lower) / (higher - lower)) * (projectedUpper - projectedLower) +
     projectedLower
   )
 }
 
+/**
+ * Executes `fn` once for each index in [0, count). The array-free equivalent
+ * of `for (let i = 0; i < count; i++)`, when you don't need a return value.
+ */
 export const timesForEach = (count: number, fn: (i: number) => void) => {
   for (let i = 0; i < count; i++) fn(i)
 }
 
+/**
+ * Builds an array of length `count` where slot i is `fn(i)`.
+ * The array-building counterpart to {@link timesForEach}.
+ */
 export const timesMap = <T>(count: number, fn: (index: number) => T): T[] => {
   const results: T[] = []
 
@@ -36,6 +54,11 @@ export const timesMap = <T>(count: number, fn: (index: number) => T): T[] => {
   return results
 }
 
+/**
+ * Reduces over the indices [0, count) via `fn`, optionally starting from
+ * `initialAcc`. Without an initial value, index 0 becomes the accumulator
+ * (which is why the loop starts at 1 in that case).
+ */
 export const timesReduce = <T>(
   count: number,
   fn: (acc: T, item: number) => T,
@@ -49,6 +72,7 @@ export const timesReduce = <T>(
   return acc
 }
 
+/** Iterates a collection from its last element down to the first. */
 export const reversedForEach = <T>(
   collection: T[],
   fn: (item: T, index: number) => void,
@@ -154,11 +178,22 @@ export function assertIsNotUndefinedOrNull<T>(
     )
 }
 
+/**
+ * Converts an Nx1 column vector (a list of numbers) into an Nx1 matrix, so it
+ * can participate in matrix operations.
+ * @example [1, 2, 3] -> [[1], [2], [3]]
+ */
 export const toMatrix = (vector: number[]): number[][] =>
   vector.map(value => [value])
+
+/**
+ * Inverse of {@link toMatrix}: extracts the single column from an Nx1 matrix.
+ * @example [[1], [2], [3]] -> [1, 2, 3]
+ */
 export const fromMatrix = (matrix: number[][]): number[] =>
   matrix.map(row => row[0])
 
+/** Element-wise addition of two matrices with identical dimensions. */
 export const addMatrices = (
   left: NumericMatrix,
   right: NumericMatrix,
@@ -190,6 +225,10 @@ export const addMatrices = (
   return result
 }
 
+/**
+ * Standard matrix product (rows of `left` dotted with columns of `right`).
+ * Requires left.cols === right.rows. Used to compute z(𝓁) = w(𝓁)·a(𝓁-1).
+ */
 export const multiplyMatrices = (
   left: NumericMatrix,
   right: NumericMatrix,
@@ -221,6 +260,7 @@ export const multiplyMatrices = (
   return result
 }
 
+/** Returns a random number in [min, max). Defaults to [0, 1). */
 export const random = (min = 0, max = 1) => Math.random() * (max - min) + min
 
 /**
