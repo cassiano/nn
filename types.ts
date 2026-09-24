@@ -10,18 +10,3 @@ export type TrainingData = {
   inputs: NumericMatrix
   labels: NumericVector
 }
-
-export type ActivationFnType = 'sigmoid' | 'relu' | 'tanh' | 'softmax'
-
-export type Layer = {
-  name: string
-  size: number
-  a: NumericVector // Activation values [size]
-}
-
-export type ParameterizedLayer = Layer & {
-  w: NumericMatrix // Weights matrix for the layer [size][previous layer size]
-  b: NumericVector // Bias vector for the layer [size]
-  z: NumericVector // Pre-activation values [size]
-  σ: ActivationFnType
-}

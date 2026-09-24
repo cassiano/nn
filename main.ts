@@ -1,3 +1,4 @@
+import { Layer } from './layer.ts'
 import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
 
@@ -8,38 +9,10 @@ const main = async () => {
   await loader.load(console.log)
 
   const network = new Network([
-    {
-      name: 'Input Layer',
-      size: 784,
-      a: [],
-    },
-    {
-      name: 'Hidden Layer 1',
-      size: 16,
-      a: [],
-      w: [],
-      b: [],
-      z: [],
-      σ: 'sigmoid',
-    },
-    {
-      name: 'Hidden Layer 2',
-      size: 16,
-      a: [],
-      w: [],
-      b: [],
-      z: [],
-      σ: 'relu',
-    },
-    {
-      name: 'Output Layer',
-      size: 10,
-      a: [],
-      w: [],
-      b: [],
-      z: [],
-      σ: 'softmax',
-    },
+    new Layer('Input Layer', 784),
+    new Layer('Hidden Layer 1', 16, 'sigmoid'),
+    new Layer('Hidden Layer 2', 16, 'relu'),
+    new Layer('Output Layer', 10, 'softmax'),
   ])
 
   console.log({ parameterCount: network.parameterCount })

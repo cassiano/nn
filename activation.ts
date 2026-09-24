@@ -17,7 +17,7 @@ export function relu(x: number): number {
 }
 
 /** Derivative of ReLU: 1 for positive inputs, 0 otherwise */
-export function reluDeriv(x: number): number {
+export function reluDerivative(x: number): number {
   return x > 0 ? 1 : 0
 }
 
@@ -41,7 +41,7 @@ export function sigmoid(x: number): number {
 }
 
 /** Derivative of sigmoid: s * (1 - s) where s = sigmoid(x) */
-export function sigmoidDeriv(x: number): number {
+export function sigmoidDerivative(x: number): number {
   const s = sigmoid(x)
 
   return s * (1 - s)
@@ -58,7 +58,7 @@ export function tanh(x: number): number {
 }
 
 /** Derivative of tanh: 1 - tanh(x)^2 */
-export function tanhDeriv(x: number): number {
+export function tanhDerivative(x: number): number {
   const t = Math.tanh(x)
 
   return 1 - t * t
