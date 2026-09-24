@@ -2,13 +2,15 @@ import { Layer } from './layer.ts'
 import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
 
+let network: Network
+
 const main = async () => {
   let averageNetworkCost = 0
 
   const loader = new MnistLoader()
   await loader.load(console.log)
 
-  const network = new Network(
+  network = new Network(
     [
       new Layer('Input Layer', 784),
       new Layer('Hidden Layer 1', 16, 'sigmoid'),
