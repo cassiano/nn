@@ -18,7 +18,7 @@ import {
 import { softmax } from './activation.ts'
 import { ParameterizedLayer, NumericVector, Layer } from './types.ts'
 import { MNIST_OUTPUT_SIZE } from './constants.ts'
-import { timesForEachN } from './utils.ts'
+import { timesForEachN, timesForEach } from './utils.ts'
 
 export class Network {
   y: NumericVector = [] // Expected values for the current sample
@@ -117,5 +117,58 @@ export class Network {
       this.outputLayer.a.length,
       i => (this.y[i] - this.outputLayer.a[i]) ** 2,
     ).reduce((acc, item) => acc + item)
+  }
+
+  // ∂C/∂w(𝓁)(𝒿, 𝚔), ∂C/∂b(𝓁)(𝒿), 1 ≤ 𝓁 ≤ 𝐋, 𝒿: layer 𝓁, 𝚔: layer 𝓁-1
+  // [
+  //   ∂C/∂w(1)(0, 0), ∂C/∂w(1)(0, 1), ∂C/∂w(1)(0, 2), ..., ∂C/∂b(1)(0), ∂C/∂b(1)(1), ... // Layer 2's weights and biases partial derivatives
+  //   ...
+  //   ∂C/∂w(𝐋-1)(0, 0), ∂C/∂w(𝐋-1)(0, 1), ∂C/∂w(𝐋-1)(0, 2), ..., ∂C/∂b(𝐋-1)(0), ∂C/∂b(𝐋-1)(1), ... // Layer 𝐋-1's weights and biases partial derivatives
+  //   ∂C/∂w(𝐋)(0, 0), ∂C/∂w(𝐋)(0, 1), ∂C/∂w(𝐋)(0, 2), ..., ∂C/∂b(𝐋)(0), ∂C/∂b(𝐋)(1), ... // Layer 𝐋's weights and biases partial derivatives
+  // ]
+  calculateLayerGradient(𝓁: number) {
+    const gradient: NumericVector = []
+
+    const previousLayer =
+      𝓁 === 1 ? this.inputLayer : this.parameterizedLayers[𝓁 - 2]
+    const currentLayer = this.parameterizedLayers[𝓁 - 1]
+
+    timesForEachN(
+      [currentLayer.size, previousLayer.size], // Equivalent to: [currentLayer.w.length, currentLayer.w[0].length]
+      (row, col) => {
+        gradient[row * previousLayer.size + col] =
+          previousLayer.a[col] * // ∂z/∂w
+          this.activationFnDeriv(currentLayer)(currentLayer.z[row]) * // ∂a/∂z
+          (2 * (currentLayer.a[row] - this.y[row])) // ∂C/∂a
+      },
+    )
+
+    timesForEach(currentLayer.size, i => {
+      gradient[currentLayer.size * previousLayer.size + i] =
+        1 * // ∂z/∂b
+        this.activationFnDeriv(currentLayer)(currentLayer.z[i]) * // ∂a/∂z
+        (2 * (currentLayer.a[i] - this.y[i])) // ∂C/∂a
+    })
+
+    return gradient
+  }
+
+  backPropagate() {}
+
+  private activationFnDeriv(layer: ParameterizedLayer) {
+    switch (layer.σ) {
+      case 'sigmoid':
+        return sigmoidDeriv
+      case 'relu':
+        return reluDeriv
+      case 'tanh':
+        return tanhDeriv
+      case 'softmax':
+        return () => 1
+      default: {
+        const exhaustiveCheck: never = layer.σ
+        throw exhaustiveCheck
+      }
+    }
   }
 }
