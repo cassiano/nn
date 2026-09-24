@@ -34,6 +34,17 @@ The MNIST files (.zip) are already shipped inside [`mnist/`](./mnist). The
 loader reads them from disk (no network download); `--allow-read` grants
 access to the `./mnist` directory.
 
+### Running the tests
+
+```sh
+deno test --allow-read   # 72 tests across the whole suite
+deno lint               # type-lint the source and the tests
+```
+
+All tests live in [`tests/`](./tests), one `*_test.ts` file mirroring each
+source module, plus a shared `test_helpers.ts` (assertion utilities and small
+network harnesses).
+
 ## Project structure
 
 ```
@@ -46,6 +57,7 @@ access to the `./mnist` directory.
 ├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, …)
 ├── utils.ts          # Loop helpers, matrix ops, random, shuffle, assertions
 ├── constants.ts      # Central place for shared constants (empty for now)
+├── tests/            # Automated test suite (72 tests) + shared test helpers
 ├── tsconfig.json     # TS configuration (bundler-style, strict)
 └── mnist/            # The four gzipped MNIST data files
 ```
