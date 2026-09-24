@@ -222,3 +222,15 @@ export const multiplyMatrices = (
 }
 
 export const random = (min = 0, max = 1) => Math.random() * (max - min) + min
+
+/**
+ * Fisher-Yates (Knuth) shuffle: randomizes array in-place in O(n).
+ * Used to ensure each epoch sees training data in a different order.
+ */
+export const shuffle = (array: number[]): void => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+
+    ;[array[i], array[j]] = [array[j], array[i]]
+  }
+}
