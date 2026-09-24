@@ -11,10 +11,10 @@ export const MNIST_PIXEL_MAX = 2 ** 8 - 1 // 255
 
 // Files in Big Endian IDX format, gzipped.
 const MNIST_PATHS = {
-  trainImages: './mnist/train-images-idx3-ubyte.zip',
-  trainLabels: './mnist/train-labels-idx1-ubyte.zip',
-  testImages: './mnist/t10k-images-idx3-ubyte.zip',
-  testLabels: './mnist/t10k-labels-idx1-ubyte.zip',
+  trainImages: './data/mnist/train-images-idx3-ubyte.zip',
+  trainLabels: './data/mnist/train-labels-idx1-ubyte.zip',
+  testImages: './data/mnist/t10k-images-idx3-ubyte.zip',
+  testLabels: './data/mnist/t10k-labels-idx1-ubyte.zip',
 }
 
 /**
