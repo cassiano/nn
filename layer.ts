@@ -59,13 +59,6 @@ export class Layer {
     if (this.𝓁 > 0) this.initializeNetworkParameters()
   }
 
-  private initializeNetworkParameters() {
-    const previousLayer = this.network.layers[this.𝓁 - 1]
-
-    this.w = timesMapN([this.size, previousLayer.size], () => random(-1, 1))
-    this.b = timesMap(this.size, () => random(-1, 1))
-  }
-
   get parameterCount() {
     return this.𝓁 === 0 ? 0 : this.w.length * this.w[0].length + this.b.length
   }
@@ -103,9 +96,16 @@ export class Layer {
     return gradient
   }
 
-  calculateActivationValues() {
+  calculatePostActivationValues() {
     this.calculatePreActivationValues()
     this.applyActivationFunction()
+  }
+
+  private initializeNetworkParameters() {
+    const previousLayer = this.network.layers[this.𝓁 - 1]
+
+    this.w = timesMapN([this.size, previousLayer.size], () => random(-1, 1))
+    this.b = timesMap(this.size, () => random(-1, 1))
   }
 
   private calculatePreActivationValues() {

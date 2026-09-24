@@ -80,7 +80,7 @@ export class Network {
    */
   feedForward() {
     for (let 𝓁 = 1; 𝓁 < this.layers.length; 𝓁++)
-      this.layers[𝓁].calculateActivationValues()
+      this.layers[𝓁].calculatePostActivationValues()
   }
 
   // Mean squared error between desired vector y and current output a(𝐋):
