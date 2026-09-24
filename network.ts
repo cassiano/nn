@@ -1,23 +1,36 @@
 import { timesMap } from './utils.ts'
-import { NumericVector } from './types.ts'
-import { MNIST_OUTPUT_SIZE } from './constants.ts'
+import { NumericVector, InitialLayerData } from './types.ts'
 import { Layer } from './layer.ts'
+import {
+  MNIST_OUTPUT_SIZE,
+  MNIST_IMAGE_COLS,
+  MNIST_IMAGE_ROWS,
+} from './mnist_loader.ts'
 
 export class Network {
+  layers: Layer[] = []
   y: NumericVector = [] // Expected values for the current sample
 
   constructor(
-    public layers: Layer[],
+    layersData: InitialLayerData[],
     public η: number, // Learning rate (greek letter eta)
   ) {
-    if (layers[layers.length - 1].size !== MNIST_OUTPUT_SIZE)
+    // Fill all layers' weights and biases with random data, except for the input layer.
+    for (const data of layersData) {
+      const layer = new Layer(this, data.name, data.size, data.σ ?? 'none')
+
+      this.layers.push(layer)
+    }
+
+    if (this.inputLayer.size !== MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS)
       throw new Error(
-        `Expected output layer size of ${MNIST_OUTPUT_SIZE} but got ${layers[layers.length - 1].size}`,
+        `Expected input layer size of ${MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS} but got ${this.inputLayer.size}`,
       )
 
-    // Fill weights and biases with random data, except for the input layer.
-    for (let i = 1; i < this.layers.length; i++)
-      this.layers[i].initializeParameters(this.layers[i - 1])
+    if (this.outputLayer.size !== MNIST_OUTPUT_SIZE)
+      throw new Error(
+        `Expected output layer size of ${MNIST_OUTPUT_SIZE} but got ${this.outputLayer.size}`,
+      )
   }
 
   get inputLayer() {
@@ -44,8 +57,8 @@ export class Network {
   }
 
   feedForward() {
-    for (let i = 1; i < this.layers.length; i++)
-      this.layers[i].calculateActivationValues(this.layers[i - 1])
+    for (let 𝓁 = 1; 𝓁 < this.layers.length; 𝓁++)
+      this.layers[𝓁].calculateActivationValues()
   }
 
   // C = ∑(y - a(𝐋))²
@@ -57,7 +70,7 @@ export class Network {
   }
 
   calculateLayerGradient(𝓁: number) {
-    return this.layers[𝓁].calculateGradient(this.layers[𝓁 - 1], this.y)
+    return this.layers[𝓁].calculateGradient()
   }
 
   backPropagate() {}

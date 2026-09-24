@@ -1,6 +1,6 @@
-import { Layer } from './layer.ts'
 import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
+import { assertIsNotNull } from './utils.ts'
 
 let network: Network
 
@@ -9,21 +9,22 @@ const main = async () => {
 
   const loader = new MnistLoader()
   await loader.load(console.log)
+  assertIsNotNull(loader.trainData)
 
   network = new Network(
     [
-      new Layer('Input Layer', 784),
-      new Layer('Hidden Layer 1', 16, 'sigmoid'),
-      new Layer('Hidden Layer 2', 16, 'relu'),
-      new Layer('Output Layer', 10, 'softmax'),
+      { name: 'Input Layer', size: 784 },
+      { name: 'Hidden Layer 1', size: 16, σ: 'sigmoid' },
+      { name: 'Hidden Layer 2', size: 16, σ: 'relu' },
+      { name: 'Output Layer', size: 10, σ: 'softmax' },
     ],
     0.01,
   )
 
   console.log({ parameterCount: network.parameterCount })
 
-  const images = loader.getTrainingData().inputs
-  const labels = loader.getTrainingData().labels
+  const images = loader.trainData.inputs
+  const labels = loader.trainData.labels
 
   // Process all training samples.
   for (let i = 0; i < images.length; i++) {

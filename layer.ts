@@ -1,5 +1,6 @@
 import { NumericVector, NumericMatrix } from './types.ts'
 import { timesForEachN, timesForEach } from './utils.ts'
+import { Network } from './network.ts'
 import {
   random,
   timesMap,
@@ -27,26 +28,35 @@ export type ActivationFunctionType =
   | 'softmax'
 
 export class Layer {
+  // Notice that the props `w`, `b`, `z` and `σ` are completely ignored by the 1st (input) layer.
+  𝓁: number
   a: NumericVector = [] // Activation values ([size])
   w: NumericMatrix = [] // Weights ([size][previous layer size])
   b: NumericVector = [] // Biases ([size])
   z: NumericVector = [] // Pre-activation values ([size])
 
+  static id = 0
+
   constructor(
+    public network: Network,
     public name: string,
     public size: number,
     public σ: ActivationFunctionType = 'none', // Activation function (greek letter sigma)
-  ) {}
+  ) {
+    this.𝓁 = Layer.id++
 
-  initializeParameters(previousLayer: Layer) {
+    if (this.𝓁 > 0) this.initializeNetworkParameters()
+  }
+
+  private initializeNetworkParameters() {
+    const previousLayer = this.network.layers[this.𝓁 - 1]
+
     this.w = timesMapN([this.size, previousLayer.size], () => random(-1, 1))
     this.b = timesMap(this.size, () => random(-1, 1))
   }
 
   get parameterCount() {
-    return this.w.length === 0
-      ? 0
-      : this.w.length * this.w[0].length + this.b.length
+    return this.𝓁 === 0 ? 0 : this.w.length * this.w[0].length + this.b.length
   }
 
   // ∂C/∂w(𝓁)(𝒿, 𝚔), ∂C/∂b(𝓁)(𝒿), 1 ≤ 𝓁 ≤ 𝐋, 𝒿: layer 𝓁, 𝚔: layer 𝓁-1
@@ -56,35 +66,40 @@ export class Layer {
   //   ∂C/∂w(𝐋-1)(0, 0), ∂C/∂w(𝐋-1)(0, 1), ∂C/∂w(𝐋-1)(0, 2), ..., ∂C/∂b(𝐋-1)(0), ∂C/∂b(𝐋-1)(1), ... // Layer 𝐋-1's weights and biases partial derivatives
   //   ∂C/∂w(𝐋)(0, 0), ∂C/∂w(𝐋)(0, 1), ∂C/∂w(𝐋)(0, 2), ..., ∂C/∂b(𝐋)(0), ∂C/∂b(𝐋)(1), ... // Layer 𝐋's weights and biases partial derivatives
   // ]
-  calculateGradient(previousLayer: Layer, y: NumericVector) {
+  calculateGradient() {
     const gradient: NumericVector = []
+    const derivativeOfσ = this.derivativeOfσ()
+    const previousLayer = this.network.layers[this.𝓁 - 1]
+    const weightRows = this.w.length // this.size
+    const weightCols = this.w[0].length // previousLayer.size
 
-    timesForEachN(
-      [this.size, previousLayer.size], // Equivalent to: [this.w.length, this.w[0].length]
-      (row, col) => {
-        gradient[row * previousLayer.size + col] =
-          previousLayer.a[col] * // ∂z/∂w
-          this.activationFunctionDerivative()(this.z[row]) * // ∂a/∂z
-          (2 * (this.a[row] - y[row])) // ∂C/∂a
-      },
-    )
+    timesForEachN([weightRows, weightCols], (row, col) => {
+      // ∂C/∂w
+      gradient[row * weightCols + col] =
+        previousLayer.a[col] * // ∂z/∂w
+        derivativeOfσ(this.z[row]) * // ∂a/∂z
+        (2 * (this.a[row] - this.network.y[row])) // ∂C/∂a
+    })
 
-    timesForEach(this.size, i => {
-      gradient[this.size * previousLayer.size + i] =
+    timesForEach(this.b.length, i => {
+      // ∂C/∂b
+      gradient[weightRows * weightCols + i] =
         1 * // ∂z/∂b
-        this.activationFunctionDerivative()(this.z[i]) * // ∂a/∂z
-        (2 * (this.a[i] - y[i])) // ∂C/∂a
+        derivativeOfσ(this.z[i]) * // ∂a/∂z
+        (2 * (this.a[i] - this.network.y[i])) // ∂C/∂a
     })
 
     return gradient
   }
 
-  calculateActivationValues(previousLayer: Layer) {
-    this.calculatePreActivationValues(previousLayer)
+  calculateActivationValues() {
+    this.calculatePreActivationValues()
     this.applyActivationFunction()
   }
 
-  private calculatePreActivationValues(previousLayer: Layer) {
+  private calculatePreActivationValues() {
+    const previousLayer = this.network.layers[this.𝓁 - 1]
+
     // z(𝓁) = w(𝓁) * a(𝓁-1) + b(𝓁)
     this.z = fromMatrix(
       addMatrices(
@@ -119,7 +134,7 @@ export class Layer {
     }
   }
 
-  private activationFunctionDerivative() {
+  private derivativeOfσ() {
     switch (this.σ) {
       case 'sigmoid':
         return sigmoidDerivative

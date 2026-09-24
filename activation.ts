@@ -13,7 +13,7 @@
  * - Derivative: 1 if x > 0, else 0
  */
 export function relu(x: number): number {
-  return x > 0 ? x : 0
+  return Math.max(0, x)
 }
 
 /** Derivative of ReLU: 1 for positive inputs, 0 otherwise */

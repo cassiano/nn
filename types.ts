@@ -1,3 +1,5 @@
+import { ActivationFunctionType } from './layer.ts'
+
 export type NumericMatrix = number[][]
 export type NumericVector = number[]
 
@@ -9,4 +11,10 @@ export type NumericVector = number[]
 export type TrainingData = {
   inputs: NumericMatrix
   labels: NumericVector
+}
+
+export type InitialLayerData = {
+  name: string
+  size: number
+  σ?: ActivationFunctionType // Activation function (greek letter sigma)
 }
