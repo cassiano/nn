@@ -27,10 +27,10 @@ export type ActivationFunctionType =
   | 'softmax'
 
 export class Layer {
-  a: NumericVector = [] // Activation values [size]
-  w: NumericMatrix = [] // Weights matrix for the layer [size][previous layer size]
-  b: NumericVector = [] // Bias vector for the layer [size]
-  z: NumericVector = [] // Pre-activation values [size]
+  a: NumericVector = [] // Activation values ([size])
+  w: NumericMatrix = [] // Weights ([size][previous layer size])
+  b: NumericVector = [] // Biases ([size])
+  z: NumericVector = [] // Pre-activation values ([size])
 
   constructor(
     public name: string,
