@@ -49,11 +49,6 @@ export class Layer {
       : this.w.length * this.w[0].length + this.b.length
   }
 
-  calculateActivationValues(previousLayer: Layer) {
-    this.calculatePreActivationValues(previousLayer)
-    this.applyActivationFunction()
-  }
-
   // ∂C/∂w(𝓁)(𝒿, 𝚔), ∂C/∂b(𝓁)(𝒿), 1 ≤ 𝓁 ≤ 𝐋, 𝒿: layer 𝓁, 𝚔: layer 𝓁-1
   // [
   //   ∂C/∂w(1)(0, 0), ∂C/∂w(1)(0, 1), ∂C/∂w(1)(0, 2), ..., ∂C/∂b(1)(0), ∂C/∂b(1)(1), ... // Layer 2's weights and biases partial derivatives
@@ -82,6 +77,11 @@ export class Layer {
     })
 
     return gradient
+  }
+
+  calculateActivationValues(previousLayer: Layer) {
+    this.calculatePreActivationValues(previousLayer)
+    this.applyActivationFunction()
   }
 
   private calculatePreActivationValues(previousLayer: Layer) {
