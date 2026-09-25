@@ -2,8 +2,8 @@ import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
 import { assertIsNotNull } from './utils.ts'
 
-// The network is kept at module scope (rather than local to `main`) so it
-// stays accessible (and inspectable) from the Deno console after training.
+// The network and loader are kept at module scope (rather than local to `main`) so
+// they stay accessible (and inspectable) from the Deno console after training.
 let network: Network
 let loader: MnistLoader
 
