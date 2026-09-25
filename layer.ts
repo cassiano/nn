@@ -71,7 +71,7 @@ export class Layer {
   // ]
   calculateGradient() {
     const gradient: NumericVector = []
-    const derivativeOfσ = this.derivativeOfσ()
+    const derivativeOfσ = this.derivativeOfσ // Cache it into a local variable.
     const previousLayer = this.previousLayer // Cache it into a local variable.
     const weightRows = this.w.length // this.size
     const weightCols = this.w[0].length // previousLayer.size
@@ -141,7 +141,7 @@ export class Layer {
     }
   }
 
-  private derivativeOfσ() {
+  private get derivativeOfσ() {
     if (this.σ === undefined)
       throw new Error(`Expected activation function to be defined`)
 
