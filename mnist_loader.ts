@@ -9,6 +9,8 @@ export const MNIST_IMAGE_MAGIC = 0x00000803 // 2051
 export const MNIST_LABEL_MAGIC = 0x00000801 // 2049
 export const MNIST_PIXEL_MAX = 2 ** 8 - 1 // 255
 
+const IMAGE_TO_TEXT_MAPPING = ' ░▒▓▉█'
+
 // Files in Big Endian IDX format, gzipped.
 const MNIST_PATHS = {
   trainImages: './data/mnist/train-images-idx3-ubyte.zip',
@@ -183,7 +185,7 @@ export class MnistLoader {
    * Renders a 28×28 image (flattened to 784 values in [0, 1]) as text
    * using Unicode block characters for visual density.
    *
-   * Each pixel is mapped to a character from the gradient ` ░▒▓▉█`,
+   * Each pixel is mapped to a character from the mapping ` ░▒▓▉█`,
    * where 0 (black) maps to a space and 1 (white) maps to `█`.
    * Characters are doubled horizontally to approximate square pixels
    * in monospace fonts.
@@ -192,17 +194,15 @@ export class MnistLoader {
    * @returns A string with 28 newline-separated rows, each 56 characters wide
    */
   static imageToText(image: number[]): string {
-    const gradient = ' ░▒▓▉█'
-
     let text = ''
 
     timesForEachN([MNIST_IMAGE_ROWS, MNIST_IMAGE_COLS], (row, col) => {
       const pixelIndex = row * MNIST_IMAGE_COLS + col
       const value = image[pixelIndex]
       const charIndex = Math.trunc(
-        map(value, 0, 1, 0, gradient.length - 1, true),
+        map(value, 0, 1, 0, IMAGE_TO_TEXT_MAPPING.length - 1, true),
       )
-      const unicodeChar = gradient[charIndex]
+      const unicodeChar = IMAGE_TO_TEXT_MAPPING[charIndex]
 
       text += unicodeChar.repeat(2)
 
