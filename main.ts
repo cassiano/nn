@@ -5,6 +5,7 @@ import { assertIsNotNull } from './utils.ts'
 // The network is kept at module scope (rather than local to `main`) so it
 // stays accessible (and inspectable) from the Deno console after training.
 let network: Network
+let loader: MnistLoader
 
 const main = async () => {
   // Running mean of the network cost over every sample processed so far.
@@ -12,7 +13,7 @@ const main = async () => {
   let averageNetworkCost = 0
 
   // 1. Load the MNIST dataset from the gzipped IDX files in ./mnist.
-  const loader = new MnistLoader()
+  loader = new MnistLoader()
   await loader.load(console.log)
   assertIsNotNull(loader.trainData)
 
