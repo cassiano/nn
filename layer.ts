@@ -20,12 +20,7 @@ import {
   sigmoid,
 } from './activation.ts'
 
-export type ActivationFunctionType =
-  | 'none'
-  | 'sigmoid'
-  | 'relu'
-  | 'tanh'
-  | 'softmax'
+export type ActivationFunctionType = 'sigmoid' | 'relu' | 'tanh' | 'softmax'
 
 /**
  * A single layer of a {@link Network}: a fixed-size group of neurons.
@@ -52,7 +47,7 @@ export class Layer {
     public network: Network,
     public name: string,
     public size: number,
-    public σ: ActivationFunctionType = 'none', // Activation function (greek letter sigma)
+    public σ?: ActivationFunctionType, // Activation function (greek letter sigma)
   ) {
     this.𝓁 = Layer.id++
 
@@ -121,6 +116,9 @@ export class Layer {
   }
 
   private applyActivationFunction() {
+    if (this.σ === undefined)
+      throw new Error(`Expected activation function to be defined`)
+
     switch (this.σ) {
       case 'sigmoid':
         this.a = this.z.map(sigmoid)
@@ -134,10 +132,6 @@ export class Layer {
       case 'softmax':
         this.a = softmax(this.z)
         break
-      case 'none':
-        throw new Error(
-          `Expected current layer to contain a valid activation function, but got '${this.σ}'`,
-        )
       default: {
         const exhaustiveCheck: never = this.σ
         throw exhaustiveCheck
@@ -146,6 +140,9 @@ export class Layer {
   }
 
   private derivativeOfσ() {
+    if (this.σ === undefined)
+      throw new Error(`Expected activation function to be defined`)
+
     switch (this.σ) {
       case 'sigmoid':
         return sigmoidDerivative
@@ -155,10 +152,6 @@ export class Layer {
         return tanhDerivative
       case 'softmax':
         return () => 1
-      case 'none':
-        throw new Error(
-          `Expected current layer to contain a valid activation function, but got '${this.σ}'`,
-        )
       default: {
         const exhaustiveCheck: never = this.σ
         throw exhaustiveCheck

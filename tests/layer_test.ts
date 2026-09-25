@@ -1,5 +1,5 @@
 import { sigmoid } from '../activation.ts'
-import { makeTinyNetwork } from './test_helpers.ts'
+import { makeTinyNetwork, makeTinyNetworkWithoutActivation } from './test_helpers.ts'
 import { assert, assertEquals, assertThrows, assertClose, assertArrayClose } from './test_helpers.ts'
 
 Deno.test('Layer / input layer carries no trainable state', () => {
@@ -87,11 +87,21 @@ Deno.test('Layer / softmax output produces a probability distribution', () => {
 })
 
 Deno.test('Layer / forward pass throws when no activation is configured', () => {
-  const net = makeTinyNetwork('none', 'sigmoid')
+  const net = makeTinyNetworkWithoutActivation()
   const [input, hidden] = net.layers
   input.a = [1, 1]
   hidden.w = [[1, 0], [0, 1]]
   hidden.b = [0, 0]
 
-  assertThrows(() => hidden.calculatePostActivationValues(), 'activation')
+  assertThrows(() => hidden.calculatePostActivationValues(), 'activation function to be defined')
+})
+
+Deno.test('Layer / gradient throws when no activation is configured', () => {
+  const net = makeTinyNetworkWithoutActivation()
+  const [input, hidden] = net.layers
+  input.a = [1, 1]
+  hidden.w = [[1, 0], [0, 1]]
+  hidden.b = [0, 0]
+
+  assertThrows(() => hidden.calculateGradient(), 'activation function to be defined')
 })

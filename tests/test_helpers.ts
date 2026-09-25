@@ -48,6 +48,27 @@ export function makeTinyNetwork(
   return network
 }
 
+/**
+ * Builds a tiny 2 -> 2 -> 2 network whose hidden layer has no activation
+ * function configured (σ omitted), for exercising the "activation required"
+ * error paths.
+ */
+export function makeTinyNetworkWithoutActivation(
+  σOutput: ActivationFunctionType | undefined = 'sigmoid',
+): Network {
+  resetLayerCounter()
+  const network = Object.create(Network.prototype) as Network
+  network.layers = []
+  network.y = []
+  network.η = 0.01
+
+  network.layers.push(new Layer(network, 'input', 2))
+  network.layers.push(new Layer(network, 'hidden', 2))
+  network.layers.push(new Layer(network, 'output', 2, σOutput))
+
+  return network
+}
+
 /** Asserts a truthy condition, throwing with `message` otherwise. */
 export function assert(
   condition: unknown,

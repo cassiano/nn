@@ -26,7 +26,7 @@ export class Network {
     // Build each layer sequentially; only the input layer skips weight
     // initialization because it has no incoming connections.
     for (const data of layersData) {
-      const layer = new Layer(this, data.name, data.size, data.σ ?? 'none')
+      const layer = new Layer(this, data.name, data.size, data.σ)
 
       this.layers.push(layer)
     }
