@@ -84,7 +84,7 @@ export class Network {
   }
 
   // Mean squared error between desired vector y and current output a(𝐋):
-  // C = (1/n) Σ (y_i - a(𝐋)_i)²   (n = number of neurons, 10 here)
+  // C = (1/n) Σ(yᵢ - a(𝐋)ᵢ)²   (n = number of neurons, 10 here)
   get cost(): number {
     return timesMap(
       this.outputLayer.a.length,
