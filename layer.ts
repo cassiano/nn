@@ -58,6 +58,10 @@ export class Layer {
     return this.𝓁 === 0 ? 0 : this.w.length * this.w[0].length + this.b.length
   }
 
+  get previousLayer() {
+    return this.network.previousLayer(this.𝓁)
+  }
+
   // ∂C/∂w(𝓁)(𝒿, 𝚔), ∂C/∂b(𝓁)(𝒿), 1 ≤ 𝓁 ≤ 𝐋, 𝒿: layer 𝓁, 𝚔: layer 𝓁-1
   // [
   //   ∂C/∂w(1)(0, 0), ∂C/∂w(1)(0, 1), ∂C/∂w(1)(0, 2), ..., ∂C/∂b(1)(0), ∂C/∂b(1)(1), ... // Layer 2's weights and biases partial derivatives
@@ -68,7 +72,7 @@ export class Layer {
   calculateGradient() {
     const gradient: NumericVector = []
     const derivativeOfσ = this.derivativeOfσ()
-    const previousLayer = this.network.layers[this.𝓁 - 1]
+    const previousLayer = this.previousLayer // Cache it into a local variable.
     const weightRows = this.w.length // this.size
     const weightCols = this.w[0].length // previousLayer.size
 
@@ -97,19 +101,17 @@ export class Layer {
   }
 
   private initializeNetworkParameters() {
-    const previousLayer = this.network.layers[this.𝓁 - 1]
-
-    this.w = timesMapN([this.size, previousLayer.size], () => random(-1, 1))
+    this.w = timesMapN([this.size, this.previousLayer.size], () =>
+      random(-1, 1),
+    )
     this.b = timesMap(this.size, () => random(-1, 1))
   }
 
   private calculatePreActivationValues() {
-    const previousLayer = this.network.layers[this.𝓁 - 1]
-
     // z(𝓁) = w(𝓁) * a(𝓁-1) + b(𝓁)
     this.z = fromMatrix(
       addMatrices(
-        multiplyMatrices(this.w, toMatrix(previousLayer.a)),
+        multiplyMatrices(this.w, toMatrix(this.previousLayer.a)),
         toMatrix(this.b),
       ),
     )

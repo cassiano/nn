@@ -58,6 +58,10 @@ export class Network {
     return this.layers.reduce((count, layer) => count + layer.parameterCount, 0)
   }
 
+  previousLayer(𝓁: number) {
+    return this.layers[𝓁 - 1]
+  }
+
   /**
    * Registers one training sample: stores the raw pixel values on the input
    * layer and converts the numeric label (0-9) into a one-hot target vector,
