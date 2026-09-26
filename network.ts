@@ -221,6 +221,9 @@ export class Network {
     for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
       const currentLayer = this.layers[𝓁]
       const previousLayer = this.previousLayer(𝓁)
+      const nextLayer = !currentLayer.isOutputLayer
+        ? this.nextLayer(𝓁)
+        : undefined
       const σDerivatives: NumericVector = currentLayer.z.map(
         currentLayer.σDerivativeFn,
       )
@@ -233,8 +236,8 @@ export class Network {
             )
           : fromMatrix(
               multiplyMatrices(
-                transposeMatrix(this.nextLayer(𝓁).w),
-                toMatrix(this.nextLayer(𝓁).δ),
+                transposeMatrix(nextLayer!.w),
+                toMatrix(nextLayer!.δ),
               ),
             ),
         σDerivatives,
