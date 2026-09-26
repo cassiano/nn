@@ -71,9 +71,8 @@ export class Layer {
    * contributed to the cost. Produced by
    * {@link Network.calculateGradient} while walking layers backwards, and read
    * by the layer after this one; empty until backpropagation runs.
-   * [/doc_img/layer.ts/2026-09-26-14-25-34.png]
    */
-  δ: NumericVector = []
+  δ: NumericVector = [] // [/doc_img/layer.ts/2026-09-26-14-25-34.png]
 
   /**
    * Monotonic counter backing {@link Layer.𝓁}. Tests reset it (e.g. via
