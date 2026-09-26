@@ -286,4 +286,12 @@ export class Network {
       layer.b = addVectors(layer.b, multiplyVectorByScalar(b, -this.η))
     }
   }
+
+  predictedDigit() {
+    const predictedDigitPercentage = Math.max(...this.outputLayer.a)
+
+    return this.outputLayer.a.findIndex(
+      value => value === predictedDigitPercentage,
+    )
+  }
 }

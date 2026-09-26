@@ -46,17 +46,24 @@ const main = async () => {
   const images = loader.trainData.inputs
   const labels = loader.trainData.labels
 
+  let hits = 0
+
   // 3. Single training pass: run a forward pass for every training image and
   //    track the running average of mean squared error (MSE) as a loss metric.
   for (let i = 0; i < images.length; i++) {
     network.loadSample(images[i], labels[i])
     network.feedForward()
 
+    const predictedDigit = network.predictedDigit()
+
+    if (predictedDigit === labels[i]) hits++
+
     console.log({
       i,
       expected: labels[i],
-      predicted: network.outputLayer.a,
+      predictedDigit,
       cost: network.cost,
+      hits,
     })
 
     network.backPropagate()
