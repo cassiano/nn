@@ -34,3 +34,6 @@ export type InitialLayerData = {
   size: number
   σ?: ActivationFunctionType // Activation function (greek letter sigma)
 }
+
+export type LayerGradient = { 𝓁: number; w: NumericMatrix; b: NumericVector }
+export type Gradient = LayerGradient[]

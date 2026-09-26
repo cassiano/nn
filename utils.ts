@@ -268,6 +268,19 @@ export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
   return result
 }
 
+export const multiplyMatrixByScalar = (
+  matrix: NumericMatrix,
+  scalar: number,
+): NumericMatrix => {
+  const rowsLeft = matrix.length
+  const colsLeft = matrix[0]?.length ?? 0
+
+  return timesMapN(
+    [rowsLeft, colsLeft],
+    (row, col) => matrix[row][col] * scalar,
+  )
+}
+
 export const hadamardProduct = (
   left: NumericVector,
   right: NumericVector,
@@ -278,6 +291,25 @@ export const hadamardProduct = (
     )
 
   return left.map((leftValue, i) => leftValue * right[i])
+}
+
+export const addVectors = (
+  left: NumericVector,
+  right: NumericVector,
+): NumericVector => {
+  if (left.length !== right.length)
+    throw new Error(
+      `Size of left vector (${left.length}) must match size of right one (${right.length})`,
+    )
+
+  return left.map((leftValue, i) => leftValue + right[i])
+}
+
+export const multiplyVectorByScalar = (
+  vector: NumericVector,
+  scalar: number,
+): NumericVector => {
+  return vector.map(value => value * scalar)
 }
 
 /** Returns a random number in [min, max). Defaults to [0, 1). */

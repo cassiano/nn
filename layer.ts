@@ -39,6 +39,7 @@ export class Layer {
   w: NumericMatrix = [] // Weights ([size][previous layer size])
   b: NumericVector = [] // Biases ([size])
   z: NumericVector = [] // Pre-activation values ([size])
+  δ: NumericVector = [] // Error values ([size]) [/doc_img/layer.ts/2026-09-26-14-25-34.png]
 
   static id = 0
 

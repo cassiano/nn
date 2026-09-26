@@ -1,6 +1,22 @@
-import { timesMap } from './utils.ts'
-import { NumericVector, InitialLayerData } from './types.ts'
+import {
+  timesMap,
+  transposeMatrix,
+  multiplyMatrices,
+  toMatrix,
+  fromMatrix,
+  addMatrices,
+  multiplyMatrixByScalar,
+  addVectors,
+  multiplyVectorByScalar,
+} from './utils.ts'
+import {
+  NumericVector,
+  InitialLayerData,
+  LayerGradient,
+  Gradient,
+} from './types.ts'
 import { Layer } from './layer.ts'
+import { hadamardProduct } from './utils.ts'
 import {
   MNIST_OUTPUT_SIZE,
   MNIST_IMAGE_COLS,
@@ -104,41 +120,59 @@ export class Network {
   //   ∂C/∂w(𝐋)(0, 0), ∂C/∂w(𝐋)(0, 1), ∂C/∂w(𝐋)(0, 2), ..., ∂C/∂b(𝐋)(0), ∂C/∂b(𝐋)(1), ... // Layer 𝐋's weights and biases partial derivatives
   // ]
   calculateGradient() {
-    const gradient: NumericVector = []
-    let gradientOffset = 0
+    const gradient: Gradient = []
 
     for (let 𝓁 = this.layers.length - 1; 𝓁 >= 1; 𝓁--) {
-      const layer = this.layers[𝓁]
+      const currentLayer = this.layers[𝓁]
       const previousLayer = this.layers[𝓁 - 1]
-      const derivativeOfσ = layer.derivativeOfσ // Cache it into a local variable.
-      const weightRows = layer.size
-      const weightCols = previousLayer.size
+      const derivativeOfσ = currentLayer.derivativeOfσ // Cache it into a local variable.
+      const derivativeValuesOfσ: NumericVector =
+        currentLayer.z.map(derivativeOfσ)
+      let hadamardProductLeftValue: NumericVector
 
-      // Valid for layer 𝐋 only.
-      for (let row = 0; row < weightRows; row++) {
-        const layerError =
-          derivativeOfσ(layer.z[row]) * // ∂a/∂z
-          (2 * (layer.a[row] - this.y[row])) // ∂C/∂a
+      // 𝓁 === 𝐋?
+      if (𝓁 === this.layers.length - 1)
+        hadamardProductLeftValue = currentLayer.a.map(
+          (activationValue, i) => 2 * (activationValue - this.y[i]),
+        )
+      else {
+        const nextLayer = this.layers[𝓁 + 1]
 
-        gradient[gradientOffset + weightRows * weightCols + row] =
-          1 * // ∂z/∂b
-          layerError
-
-        for (let col = 0; col < weightCols; col++) {
-          // ∂C/∂w
-          gradient[gradientOffset + row * weightCols + col] =
-            previousLayer.a[col] * // ∂z/∂w
-            layerError
-        }
+        hadamardProductLeftValue = fromMatrix(
+          multiplyMatrices(transposeMatrix(nextLayer.w), toMatrix(nextLayer.δ)),
+        )
       }
 
-      gradientOffset += layer.size * (previousLayer.size + 1)
+      currentLayer.δ = hadamardProduct(
+        hadamardProductLeftValue,
+        derivativeValuesOfσ,
+      )
+
+      const layerGradient: LayerGradient = {
+        𝓁,
+        w: multiplyMatrices(
+          toMatrix(currentLayer.δ),
+          transposeMatrix(toMatrix(previousLayer.a)),
+        ),
+        b: currentLayer.δ,
+      }
+
+      gradient.push(layerGradient)
     }
 
     return gradient
   }
 
-  // Placeholder: will traverse layers backwards and accumulate weight updates
-  // using the chain rule so the network can learn from its errors.
-  backPropagate() {}
+  // Traverses layers backwards and accumulate weight updates using the chain
+  // rule so the network can learn from its errors.
+  backPropagate() {
+    const gradient = this.calculateGradient()
+
+    for (const { 𝓁, b, w } of gradient) {
+      const layer = this.layers[𝓁]
+
+      layer.w = addMatrices(layer.w, multiplyMatrixByScalar(w, -this.η))
+      layer.b = addVectors(layer.b, multiplyVectorByScalar(b, -this.η))
+    }
+  }
 }
