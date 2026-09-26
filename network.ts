@@ -197,7 +197,7 @@ export class Network {
    * trainable parameter, by the chain rule, traversing layers backwards.
    *
    * Works in two steps per layer 𝓁, from 𝐋 down to 1:
-   * 1. Error signal δ(𝓁) = ∂C/∂a(𝓁) · σ'(z(𝓁)). For the output layer (𝓁 = 𝐋)
+   * 1. Error signal δ(𝓁) = ∂C/∂a(𝓁) ☉ σ'(z(𝓁)). For the output layer (𝓁 = 𝐋)
    *    ∂C/∂a(𝐋)ᵢ = 2·(a(𝐋)ᵢ - yᵢ) comes straight from the squared cost. For an
    *    inner layer it is propagated from the next one:
    *    ∂C/∂a(𝓁) = w(𝓁+1)ᵀ · δ(𝓁+1), which is why the traversal must run
