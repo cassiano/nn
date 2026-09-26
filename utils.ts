@@ -1,4 +1,4 @@
-import { NumericMatrix } from './types.ts'
+import { NumericMatrix, NumericVector } from './types.ts'
 
 /**
  * Re-maps a `value` from the range [lower, higher] to the range
@@ -198,10 +198,10 @@ export const addMatrices = (
   left: NumericMatrix,
   right: NumericMatrix,
 ): NumericMatrix => {
-  const colsLeft = left[0].length
-  const colsRight = right[0].length
   const rowsLeft = left.length
+  const colsLeft = left[0]?.length ?? 0
   const rowsRight = right.length
+  const colsRight = right[0]?.length ?? 0
 
   if (colsLeft !== colsRight)
     throw new Error(
@@ -213,16 +213,10 @@ export const addMatrices = (
       `Number of rows from left matrix (${rowsLeft}) must match number of rows from right one (${rowsRight})`,
     )
 
-  const result: NumericMatrix = []
-
-  for (let row = 0; row < rowsLeft; row++) {
-    result[row] = []
-
-    for (let col = 0; col < colsRight; col++)
-      result[row][col] = left[row][col] + right[row][col]
-  }
-
-  return result
+  return timesMapN(
+    [rowsLeft, colsLeft],
+    (row, col) => left[row][col] + right[row][col],
+  )
 }
 
 /**
@@ -258,6 +252,32 @@ export const multiplyMatrices = (
   }
 
   return result
+}
+
+export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
+  const cols = matrix[0].length
+  const rows = matrix.length
+
+  const result: NumericMatrix = []
+
+  timesForEachN([rows, cols], (row, col) => {
+    result[col] ??= []
+    result[col][row] = matrix[row][col]
+  })
+
+  return result
+}
+
+export const hadamardProduct = (
+  left: NumericVector,
+  right: NumericVector,
+): NumericVector => {
+  if (left.length !== right.length)
+    throw new Error(
+      `Size of left vector (${left.length}) must match size of right one (${right.length})`,
+    )
+
+  return left.map((leftValue, i) => leftValue * right[i])
 }
 
 /** Returns a random number in [min, max). Defaults to [0, 1). */
