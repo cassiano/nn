@@ -67,7 +67,7 @@ export class Layer {
     this.applyActivationFunction()
   }
 
-  get derivativeOfσ() {
+  get σDerivativeFn() {
     if (this.σ === undefined)
       throw new Error(`Expected activation function to be defined`)
 

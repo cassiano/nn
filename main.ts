@@ -8,10 +8,6 @@ let network: Network
 let loader: MnistLoader
 
 const main = async () => {
-  // Running mean of the network cost over every sample processed so far.
-  // Updated incrementally so we don't need to re-sum all previous losses.
-  let averageNetworkCost = 0
-
   // 1. Load the MNIST dataset from the gzipped IDX files in ./mnist.
   loader = new MnistLoader()
   await loader.load(console.log)
@@ -43,14 +39,15 @@ const main = async () => {
     network.loadSample(images[i], labels[i])
     network.feedForward()
 
-    averageNetworkCost = (averageNetworkCost * i + network.cost) / (i + 1)
+    console.log({
+      i,
+      expected: labels[i],
+      predicted: network.outputLayer.a,
+      cost: network.cost,
+    })
 
-    // Log progress every 1000 samples so long runs stay observable.
-    if ((i + 1) % 1000 === 0)
-      console.log({ count: i + 1, averageNetworkCost: averageNetworkCost })
+    network.backPropagate()
   }
-
-  console.log({ finalAverageNetworkCost: averageNetworkCost })
 }
 
 await main()

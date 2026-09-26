@@ -66,7 +66,7 @@ export class Network {
 
   /** Last layer, whose activations are compared against the expected label. */
   get outputLayer() {
-    return this.layers[this.layers.length - 1]
+    return this.layers[this.𝐋]
   }
 
   /** Total number of trainable parameters (weights + biases, input layer excluded). */
@@ -75,7 +75,15 @@ export class Network {
   }
 
   previousLayer(𝓁: number) {
+    if (𝓁 === 0) throw new Error('Input layer does not have a previous one')
+
     return this.layers[𝓁 - 1]
+  }
+
+  nextLayer(𝓁: number) {
+    if (𝓁 === this.𝐋) throw new Error('Output layer does not have a next one')
+
+    return this.layers[𝓁 + 1]
   }
 
   /**
@@ -99,7 +107,7 @@ export class Network {
    * layer by recomputing, for every hidden/output layer 𝓁, z(𝓁) and a(𝓁).
    */
   feedForward() {
-    for (let 𝓁 = 1; 𝓁 < this.layers.length; 𝓁++)
+    for (let 𝓁 = 1; 𝓁 < this.𝐋; 𝓁++)
       this.layers[𝓁].calculatePostActivationValues()
   }
 
@@ -112,6 +120,13 @@ export class Network {
     ).reduce((acc, item) => acc + item)
   }
 
+  get 𝐋() {
+    return this.layers.length - 1
+  }
+
+  // Calculates the gradient vector, traversing layers backwards and accumulating weight updates
+  // using the chain rule so the network can learn from its errors.
+  //
   // ∂C/∂w(𝓁)(𝒿, 𝚔), ∂C/∂b(𝓁)(𝒿), 1 ≤ 𝓁 ≤ 𝐋, 𝒿: layer 𝓁, 𝚔: layer 𝓁-1
   // [
   //   ∂C/∂w(1)(0, 0), ∂C/∂w(1)(0, 1), ∂C/∂w(1)(0, 2), ..., ∂C/∂b(1)(0), ∂C/∂b(1)(1), ... // Layer 2's weights and biases partial derivatives
@@ -122,38 +137,36 @@ export class Network {
   calculateGradient() {
     const gradient: Gradient = []
 
-    for (let 𝓁 = this.layers.length - 1; 𝓁 >= 1; 𝓁--) {
+    for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
       const currentLayer = this.layers[𝓁]
-      const previousLayer = this.layers[𝓁 - 1]
-      const derivativeOfσ = currentLayer.derivativeOfσ // Cache it into a local variable.
-      const derivativeValuesOfσ: NumericVector =
-        currentLayer.z.map(derivativeOfσ)
-      let hadamardProductLeftValue: NumericVector
+      const previousLayer = this.previousLayer(𝓁)
+      const σDerivatives: NumericVector = currentLayer.z.map(
+        currentLayer.σDerivativeFn,
+      )
 
-      // 𝓁 === 𝐋?
-      if (𝓁 === this.layers.length - 1)
-        hadamardProductLeftValue = currentLayer.a.map(
-          (activationValue, i) => 2 * (activationValue - this.y[i]),
-        )
-      else {
-        const nextLayer = this.layers[𝓁 + 1]
-
-        hadamardProductLeftValue = fromMatrix(
-          multiplyMatrices(transposeMatrix(nextLayer.w), toMatrix(nextLayer.δ)),
-        )
-      }
-
+      // [/doc_img/network.ts/2026-09-26-18-25-14.png]
       currentLayer.δ = hadamardProduct(
-        hadamardProductLeftValue,
-        derivativeValuesOfσ,
+        𝓁 === this.𝐋
+          ? currentLayer.a.map(
+              (activationValue, i) => 2 * (activationValue - this.y[i]),
+            )
+          : fromMatrix(
+              multiplyMatrices(
+                transposeMatrix(this.nextLayer(𝓁).w),
+                toMatrix(this.nextLayer(𝓁).δ),
+              ),
+            ),
+        σDerivatives,
       )
 
       const layerGradient: LayerGradient = {
         𝓁,
+        // [/doc_img/network.ts/2026-09-26-18-21-20.png]
         w: multiplyMatrices(
           toMatrix(currentLayer.δ),
           transposeMatrix(toMatrix(previousLayer.a)),
         ),
+        // [/doc_img/network.ts/2026-09-26-18-21-43.png]
         b: currentLayer.δ,
       }
 
@@ -163,8 +176,6 @@ export class Network {
     return gradient
   }
 
-  // Traverses layers backwards and accumulate weight updates using the chain
-  // rule so the network can learn from its errors.
   backPropagate() {
     const gradient = this.calculateGradient()
 
