@@ -1,5 +1,5 @@
 import { sigmoid, sigmoidDerivative } from '../activation.ts'
-import { makeStandardNetwork, makeTinyNetwork, resetLayerCounter } from './test_helpers.ts'
+import { makeStandardNetwork, makeTinyNetwork, makeTinyNetworkWithoutActivation, resetLayerCounter } from './test_helpers.ts'
 import {
   assert,
   assertEquals,
@@ -139,7 +139,7 @@ Deno.test('Network / output layer gradient matches numerical differentiation', (
   net.feedForward()
 
   const eps = 1e-5
-  const grad = output.calculateGradient()
+  const grad = net.calculateGradient()
 
   const reconstruct = (weight: number, biasOffset = 0) => {
     // Perturb w[0][0] and, if requested, b[0], then measure the true cost.
@@ -175,23 +175,75 @@ Deno.test('Network / inner layer gradient follows the implemented non-backprop r
   net.y = [1, 0]
   net.feedForward()
 
-  const grad = hidden.calculateGradient()
+  const grad = net.calculateGradient()
+  // calculateGradient() walks layers from the output backwards, so on this
+  // three-layer net the output block (6 entries) precedes the hidden block.
+  const hiddenOffset = 6
+
   // Current (placeholder) rule, before full backpropagation is implemented:
   // ∂C/∂w[h][r][c] = a_prev[c] · σ'(z[r]) · 2·(a[r] - y[r])
   const expectedW00 = input.a[0] * sigmoidDerivative(hidden.z[0]) * 2 * (hidden.a[0] - net.y[0])
-  assertClose(grad[0], expectedW00, 1e-12)
+  assertClose(grad[hiddenOffset], expectedW00, 1e-12)
 
-  // Biases live after the weight partials: index = rows*cols.
+  // Biases live after the weight partials: index = offset + rows*cols.
   const expectedB0 = 1 * sigmoidDerivative(hidden.z[0]) * 2 * (hidden.a[0] - net.y[0])
-  assertClose(grad[2 * 2], expectedB0, 1e-12)
+  assertClose(grad[hiddenOffset + 2 * 2], expectedB0, 1e-12)
 })
 
-Deno.test('Network / calculateLayerGradient delegates to the layer', () => {
+Deno.test('Network / calculateGradient covers every layer exactly once', () => {
   const net = makeTinyNetwork()
   const [input] = net.layers
   input.a = [0.5, 0.9]
   net.y = [1, 0]
   net.feedForward()
 
-  assertEquals(net.calculateLayerGradient(2), net.layers[2].calculateGradient())
+  // One partial per weight plus one per bias, for every layer but the input.
+  const expected = net.layers
+    .slice(1)
+    .reduce((sum, layer) => sum + layer.size * (layer.previousLayer.size + 1), 0)
+
+  assertEquals(net.calculateGradient().length, expected)
+  assertEquals(expected, 12)
+})
+
+Deno.test('Network / gradient length matches parameterCount', () => {
+  // Every learnable parameter has exactly one partial, so the gradient vector
+  // and the parameter count must agree in length.
+  const net = makeStandardNetwork()
+  net.loadSample(new Array(784).fill(0.5), 3)
+  net.feedForward()
+
+  assertEquals(net.calculateGradient().length, net.parameterCount)
+  assertEquals(net.parameterCount, 13002)
+})
+
+Deno.test('Network / gradient partials are finite and defined', () => {
+  // Scoped to the tiny network on purpose. The placeholder error term reads
+  // y[row] per neuron, so it is only well-defined while no layer is wider than
+  // y. On the MNIST net the 16-neuron hidden layers index y[10..15] as
+  // undefined and produce NaN; propagating a real error term backwards through
+  // the layers is exactly what backPropagate() still has to implement.
+  const net = makeTinyNetwork()
+  const [input] = net.layers
+  input.a = [0.5, 0.9]
+  net.y = [1, 0]
+  net.feedForward()
+
+  for (const partial of net.calculateGradient())
+    assert(Number.isFinite(partial))
+})
+
+Deno.test('Network / calculateGradient throws when a layer has no activation', () => {
+  // calculateGradient() reads layer.derivativeOfσ, which rejects a missing σ.
+  // Called without feedForward() on purpose: the forward pass would reject the
+  // same missing σ first, and this targets the gradient's own error path.
+  const net = makeTinyNetworkWithoutActivation()
+  const [input] = net.layers
+  input.a = [1, 1]
+  net.y = [1, 0]
+
+  assertThrows(
+    () => net.calculateGradient(),
+    'Expected activation function to be defined',
+  )
 })

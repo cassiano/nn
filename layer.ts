@@ -1,5 +1,4 @@
 import { NumericVector, NumericMatrix } from './types.ts'
-import { timesForEachN, timesForEach } from './utils.ts'
 import { Network } from './network.ts'
 import {
   random,
@@ -62,42 +61,29 @@ export class Layer {
     return this.network.previousLayer(this.𝓁)
   }
 
-  // ∂C/∂w(𝓁)(𝒿, 𝚔), ∂C/∂b(𝓁)(𝒿), 1 ≤ 𝓁 ≤ 𝐋, 𝒿: layer 𝓁, 𝚔: layer 𝓁-1
-  // [
-  //   ∂C/∂w(1)(0, 0), ∂C/∂w(1)(0, 1), ∂C/∂w(1)(0, 2), ..., ∂C/∂b(1)(0), ∂C/∂b(1)(1), ... // Layer 2's weights and biases partial derivatives
-  //   ...
-  //   ∂C/∂w(𝐋-1)(0, 0), ∂C/∂w(𝐋-1)(0, 1), ∂C/∂w(𝐋-1)(0, 2), ..., ∂C/∂b(𝐋-1)(0), ∂C/∂b(𝐋-1)(1), ... // Layer 𝐋-1's weights and biases partial derivatives
-  //   ∂C/∂w(𝐋)(0, 0), ∂C/∂w(𝐋)(0, 1), ∂C/∂w(𝐋)(0, 2), ..., ∂C/∂b(𝐋)(0), ∂C/∂b(𝐋)(1), ... // Layer 𝐋's weights and biases partial derivatives
-  // ]
-  calculateGradient() {
-    const gradient: NumericVector = []
-    const derivativeOfσ = this.derivativeOfσ // Cache it into a local variable.
-    const previousLayer = this.previousLayer // Cache it into a local variable.
-    const weightRows = this.w.length // this.size
-    const weightCols = this.w[0].length // previousLayer.size
-
-    timesForEachN([weightRows, weightCols], (row, col) => {
-      // ∂C/∂w
-      gradient[row * weightCols + col] =
-        previousLayer.a[col] * // ∂z/∂w
-        derivativeOfσ(this.z[row]) * // ∂a/∂z
-        (2 * (this.a[row] - this.network.y[row])) // ∂C/∂a
-    })
-
-    timesForEach(this.b.length, i => {
-      // ∂C/∂b
-      gradient[weightRows * weightCols + i] =
-        1 * // ∂z/∂b
-        derivativeOfσ(this.z[i]) * // ∂a/∂z
-        (2 * (this.a[i] - this.network.y[i])) // ∂C/∂a
-    })
-
-    return gradient
-  }
-
   calculatePostActivationValues() {
     this.calculatePreActivationValues()
     this.applyActivationFunction()
+  }
+
+  get derivativeOfσ() {
+    if (this.σ === undefined)
+      throw new Error(`Expected activation function to be defined`)
+
+    switch (this.σ) {
+      case 'sigmoid':
+        return sigmoidDerivative
+      case 'relu':
+        return reluDerivative
+      case 'tanh':
+        return tanhDerivative
+      case 'softmax':
+        return () => 1
+      default: {
+        const exhaustiveCheck: never = this.σ
+        throw exhaustiveCheck
+      }
+    }
   }
 
   private initializeNetworkParameters() {
@@ -134,26 +120,6 @@ export class Layer {
       case 'softmax':
         this.a = softmax(this.z)
         break
-      default: {
-        const exhaustiveCheck: never = this.σ
-        throw exhaustiveCheck
-      }
-    }
-  }
-
-  private get derivativeOfσ() {
-    if (this.σ === undefined)
-      throw new Error(`Expected activation function to be defined`)
-
-    switch (this.σ) {
-      case 'sigmoid':
-        return sigmoidDerivative
-      case 'relu':
-        return reluDerivative
-      case 'tanh':
-        return tanhDerivative
-      case 'softmax':
-        return () => 1
       default: {
         const exhaustiveCheck: never = this.σ
         throw exhaustiveCheck

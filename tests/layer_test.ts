@@ -1,6 +1,15 @@
 import { sigmoid } from '../activation.ts'
-import { makeTinyNetwork, makeTinyNetworkWithoutActivation } from './test_helpers.ts'
-import { assert, assertEquals, assertThrows, assertClose, assertArrayClose } from './test_helpers.ts'
+import {
+  makeTinyNetwork,
+  makeTinyNetworkWithoutActivation,
+} from './test_helpers.ts'
+import {
+  assert,
+  assertEquals,
+  assertThrows,
+  assertClose,
+  assertArrayClose,
+} from './test_helpers.ts'
 
 Deno.test('Layer / input layer carries no trainable state', () => {
   const net = makeTinyNetwork()
@@ -14,7 +23,10 @@ Deno.test('Layer / input layer carries no trainable state', () => {
 
 Deno.test('Layer / layers receive sequential indices', () => {
   const net = makeTinyNetwork()
-  assertEquals(net.layers.map(layer => layer.𝓁), [0, 1, 2])
+  assertEquals(
+    net.layers.map(layer => layer.𝓁),
+    [0, 1, 2],
+  )
 })
 
 Deno.test('Layer / hidden layers initialize weights and biases', () => {
@@ -35,19 +47,25 @@ Deno.test('Layer / parameterCount counts all weights plus all biases', () => {
   assertEquals(net.layers[0].parameterCount, 0)
 })
 
-Deno.test('Layer / weights and biases are randomly initialized in [-1, 1)', () => {
-  const net = makeTinyNetwork()
-  const hidden = net.layers[1]
-  for (const row of hidden.w)
-    for (const value of row) assert(value >= -1 && value < 1)
-  for (const value of hidden.b) assert(value >= -1 && value < 1)
-})
+Deno.test(
+  'Layer / weights and biases are randomly initialized in [-1, 1)',
+  () => {
+    const net = makeTinyNetwork()
+    const hidden = net.layers[1]
+    for (const row of hidden.w)
+      for (const value of row) assert(value >= -1 && value < 1)
+    for (const value of hidden.b) assert(value >= -1 && value < 1)
+  },
+)
 
 Deno.test('Layer / calculatePostActivationValues computes z then a', () => {
   const net = makeTinyNetwork()
   const [input, hidden] = net.layers
   input.a = [1, 2]
-  hidden.w = [[1, 0], [0, 1]]
+  hidden.w = [
+    [1, 0],
+    [0, 1],
+  ]
   hidden.b = [0.5, -0.5]
 
   hidden.calculatePostActivationValues()
@@ -62,7 +80,10 @@ Deno.test('Layer / relu activation clamps negatives to zero', () => {
   const net = makeTinyNetwork('relu', 'relu')
   const [input, hidden] = net.layers
   input.a = [-2, 3]
-  hidden.w = [[1, 0], [0, 1]]
+  hidden.w = [
+    [1, 0],
+    [0, 1],
+  ]
   hidden.b = [0, 0]
 
   hidden.calculatePostActivationValues()
@@ -74,34 +95,43 @@ Deno.test('Layer / softmax output produces a probability distribution', () => {
   const net = makeTinyNetwork('relu', 'softmax')
   const [input, hidden, output] = net.layers
   input.a = [0.1, 0.2]
-  hidden.w = [[1, 0], [0, 1]]
+  hidden.w = [
+    [1, 0],
+    [0, 1],
+  ]
   hidden.b = [0, 0]
-  output.w = [[1, 0], [0, 1]]
+  output.w = [
+    [1, 0],
+    [0, 1],
+  ]
   output.b = [0.3, 0.1]
 
   // Run the forward pass so the relu hidden layer feeds the softmax output.
   net.feedForward()
 
-  assertClose(output.a.reduce((sum, v) => sum + v, 0), 1, 1e-12)
+  assertClose(
+    output.a.reduce((sum, v) => sum + v, 0),
+    1,
+    1e-12,
+  )
   for (const value of output.a) assert(value > 0)
 })
 
-Deno.test('Layer / forward pass throws when no activation is configured', () => {
-  const net = makeTinyNetworkWithoutActivation()
-  const [input, hidden] = net.layers
-  input.a = [1, 1]
-  hidden.w = [[1, 0], [0, 1]]
-  hidden.b = [0, 0]
+Deno.test(
+  'Layer / forward pass throws when no activation is configured',
+  () => {
+    const net = makeTinyNetworkWithoutActivation()
+    const [input, hidden] = net.layers
+    input.a = [1, 1]
+    hidden.w = [
+      [1, 0],
+      [0, 1],
+    ]
+    hidden.b = [0, 0]
 
-  assertThrows(() => hidden.calculatePostActivationValues(), 'activation function to be defined')
-})
-
-Deno.test('Layer / gradient throws when no activation is configured', () => {
-  const net = makeTinyNetworkWithoutActivation()
-  const [input, hidden] = net.layers
-  input.a = [1, 1]
-  hidden.w = [[1, 0], [0, 1]]
-  hidden.b = [0, 0]
-
-  assertThrows(() => hidden.calculateGradient(), 'activation function to be defined')
-})
+    assertThrows(
+      () => hidden.calculatePostActivationValues(),
+      'activation function to be defined',
+    )
+  },
+)

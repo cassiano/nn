@@ -96,9 +96,46 @@ export class Network {
     ).reduce((acc, item) => acc + item)
   }
 
-  /** Delegates gradient computation for a single layer to that layer. */
-  calculateLayerGradient(𝓁: number) {
-    return this.layers[𝓁].calculateGradient()
+  // ∂C/∂w(𝓁)(𝒿, 𝚔), ∂C/∂b(𝓁)(𝒿), 1 ≤ 𝓁 ≤ 𝐋, 𝒿: layer 𝓁, 𝚔: layer 𝓁-1
+  // [
+  //   ∂C/∂w(1)(0, 0), ∂C/∂w(1)(0, 1), ∂C/∂w(1)(0, 2), ..., ∂C/∂b(1)(0), ∂C/∂b(1)(1), ... // Layer 2's weights and biases partial derivatives
+  //   ...
+  //   ∂C/∂w(𝐋-1)(0, 0), ∂C/∂w(𝐋-1)(0, 1), ∂C/∂w(𝐋-1)(0, 2), ..., ∂C/∂b(𝐋-1)(0), ∂C/∂b(𝐋-1)(1), ... // Layer 𝐋-1's weights and biases partial derivatives
+  //   ∂C/∂w(𝐋)(0, 0), ∂C/∂w(𝐋)(0, 1), ∂C/∂w(𝐋)(0, 2), ..., ∂C/∂b(𝐋)(0), ∂C/∂b(𝐋)(1), ... // Layer 𝐋's weights and biases partial derivatives
+  // ]
+  calculateGradient() {
+    const gradient: NumericVector = []
+    let gradientOffset = 0
+
+    for (let 𝓁 = this.layers.length - 1; 𝓁 >= 1; 𝓁--) {
+      const layer = this.layers[𝓁]
+      const previousLayer = this.layers[𝓁 - 1]
+      const derivativeOfσ = layer.derivativeOfσ // Cache it into a local variable.
+      const weightRows = layer.size
+      const weightCols = previousLayer.size
+
+      // Valid for layer 𝐋 only.
+      for (let row = 0; row < weightRows; row++) {
+        const layerError =
+          derivativeOfσ(layer.z[row]) * // ∂a/∂z
+          (2 * (layer.a[row] - this.y[row])) // ∂C/∂a
+
+        gradient[gradientOffset + weightRows * weightCols + row] =
+          1 * // ∂z/∂b
+          layerError
+
+        for (let col = 0; col < weightCols; col++) {
+          // ∂C/∂w
+          gradient[gradientOffset + row * weightCols + col] =
+            previousLayer.a[col] * // ∂z/∂w
+            layerError
+        }
+      }
+
+      gradientOffset += layer.size * (previousLayer.size + 1)
+    }
+
+    return gradient
   }
 
   // Placeholder: will traverse layers backwards and accumulate weight updates
