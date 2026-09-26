@@ -124,14 +124,36 @@ export class Layer {
     return this.network.previousLayer(this.𝓁)
   }
 
+  /**
+   * The layer fed by this one, i.e. the network's layer at index `𝓁 + 1`.
+   * Backpropagation walks backwards through these links, reading each layer's
+   * w and δ to pull the error signal one step further from the output.
+   *
+   * @returns The layer at index `𝓁 + 1`.
+   * @throws If this is the output layer, which has no successor.
+   */
   get nextLayer() {
     return this.network.nextLayer(this.𝓁)
   }
 
+  /**
+   * Whether this layer is the network's first one, i.e. index 0, which only
+   * holds the sample's raw inputs and has no weights, biases or activation.
+   *
+   * @returns True if {@link Layer.𝓁} is 0.
+   */
   get isInputLayer() {
     return this.𝓁 === 0
   }
 
+  /**
+   * Whether this layer is the network's last one, i.e. index
+   * {@link Network.𝐋}, whose activations are the network's prediction. This is
+   * the layer whose activations {@link Network.cost} compares against the
+   * target, and where the error signal δ starts.
+   *
+   * @returns True if {@link Layer.𝓁} equals the network's output index.
+   */
   get isOutputLayer() {
     return this.𝓁 === this.network.𝐋
   }
