@@ -2,16 +2,45 @@ import type { TrainingData } from './types.ts'
 import { map, timesForEachN, assertIsNotNull } from './utils.ts'
 
 // MNIST Dataset
+
+/** Number of distinct digit classes in the dataset (0-9). */
 export const MNIST_OUTPUT_SIZE = 10
+
+/** Height in pixels of each MNIST image. */
 export const MNIST_IMAGE_ROWS = 28
+
+/** Width in pixels of each MNIST image. */
 export const MNIST_IMAGE_COLS = 28
+
+/**
+ * IDX magic number expected at the start of every image file: 0x00000803
+ * (2051), whose low byte 0x03 marks the 3-byte-label-plus-image variant.
+ */
 export const MNIST_IMAGE_MAGIC = 0x00000803 // 2051
+
+/**
+ * IDX magic number expected at the start of every label file: 0x00000801
+ * (2049), whose low byte 0x01 marks the one-byte-label variant.
+ */
 export const MNIST_LABEL_MAGIC = 0x00000801 // 2049
+
+/**
+ * Largest value a raw pixel byte can hold, used to normalize pixels to
+ * [0, 1].
+ */
 export const MNIST_PIXEL_MAX = 2 ** 8 - 1 // 255
 
+/**
+ * Characters used to render an image as text, ordered from darkest (index 0,
+ * a space for a black pixel) to lightest (the final character for a white
+ * pixel).
+ */
 const IMAGE_TO_TEXT_MAPPING = ' ░▒▓▉█'
 
-// Files in Big Endian IDX format, gzipped.
+/**
+ * Locations of the four dataset files, gzipped and in Big Endian IDX format.
+ * Read from disk rather than fetched over the network.
+ */
 const MNIST_PATHS = {
   trainImages: './data/mnist/train-images-idx3-ubyte.zip',
   trainLabels: './data/mnist/train-labels-idx1-ubyte.zip',
@@ -26,10 +55,39 @@ const MNIST_PATHS = {
  * The raw files are gzipped IDX binaries; pixels are normalized to [0, 1].
  */
 export class MnistLoader {
+  /**
+   * The parsed training split, or `null` until {@link MnistLoader.load}
+   * succeeds. `inputs` holds one flattened 784-value image per row and
+   * `labels` the matching digit for each.
+   */
   trainData: TrainingData | null = null
+
+  /**
+   * The parsed test split, shaped like {@link MnistLoader.trainData}, or `null`
+   * until {@link MnistLoader.load} succeeds.
+   */
   testData: TrainingData | null = null
+
+  /**
+   * Whether the dataset has already been read, used to make
+   * {@link MnistLoader.load} idempotent. Reading ~60 MB of IDX data twice is
+   * wasted work, so repeat calls return immediately.
+   */
   loaded = false
 
+  /**
+   * Reads and parses all four gzipped IDX files and stores the results in
+   * {@link MnistLoader.trainData} and {@link MnistLoader.testData}.
+   *
+   * Does nothing when {@link MnistLoader.loaded} is already true, so it is safe
+   * to call more than once.
+   *
+   * @param onProgress Optional callback invoked with human-readable status
+   * messages as each file is read, for progress display. Omit it to stay quiet.
+   * @returns Nothing; inspect `trainData` / `testData` afterwards.
+   * @throws If any file is missing or unreadable, if a file is not valid gzip,
+   * or if a magic number does not match the expected images/labels constant.
+   */
   async load(onProgress?: (msg: string) => void): Promise<void> {
     if (this.loaded) return
 
@@ -70,6 +128,12 @@ export class MnistLoader {
    *
    * Each pixel is normalized to [0, 1] by dividing by 255.
    * Returns a 2D array where each inner array is a flattened 28×28 image (784 values).
+   *
+   * @param path Path to the gzipped IDX file to read.
+   * @returns A 2D array with one inner array per image, each holding 784 values
+   * normalized to [0, 1] in row-major order.
+   * @throws If the file cannot be read, is not valid gzip, or its magic number
+   * is not {@link MNIST_IMAGE_MAGIC}.
    */
   private async downloadAndParseImages(path: string): Promise<number[][]> {
     const data = await Deno.readFile(path)
@@ -106,6 +170,11 @@ export class MnistLoader {
    *   Bytes 0-3: Magic number (MNIST_LABEL_MAGIC = 0x00000801 = 2049 for labels)
    *   Bytes 4-7: Number of labels
    *   Bytes 8+:  Label values (0-9), one byte per label
+   *
+   * @param path Path to the gzipped IDX file to read.
+   * @returns A flat array with one digit (0-9) per label, in file order.
+   * @throws If the file cannot be read, is not valid gzip, or its magic number
+   * is not {@link MNIST_LABEL_MAGIC}.
    */
   private async downloadAndParseLabels(path: string): Promise<number[]> {
     const data = await Deno.readFile(path)
@@ -126,6 +195,13 @@ export class MnistLoader {
 
   /**
    * Decompresses gzip data using the built-in DecompressionStream API.
+   *
+   * The stream is drained concurrently with writing, so output chunks are
+   * buffered and concatenated once the total length is known.
+   *
+   * @param data The compressed bytes.
+   * @returns A single `Uint8Array` holding the decompressed bytes.
+   * @throws If the input is not valid gzip data.
    */
   private async gunzip(data: Uint8Array): Promise<Uint8Array> {
     const ds = new DecompressionStream('gzip')

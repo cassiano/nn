@@ -7,6 +7,19 @@ import { assertIsNotNull } from './utils.ts'
 let network: Network
 let loader: MnistLoader
 
+/**
+ * Entry point: loads MNIST, builds the 784 -> 16 -> 16 -> 10 network, then runs
+ * a single training pass over every image.
+ *
+ * For each sample it loads the input, runs {@link Network.feedForward}, logs
+ * the prediction alongside the true label and the cost, then calls
+ * {@link Network.backPropagate} to step the weights. One pass is one epoch of
+ * stochastic gradient descent; there is no shuffling or batching yet.
+ *
+ * @returns Nothing. Resolves once every training sample has been processed.
+ * @throws If the dataset files are missing or malformed, or if the topology
+ * fails the MNIST size validation.
+ */
 const main = async () => {
   // 1. Load the MNIST dataset from the gzipped IDX files in ./mnist.
   loader = new MnistLoader()

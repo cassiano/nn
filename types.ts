@@ -28,6 +28,10 @@ export type TrainingData = {
  * High-level description of a layer passed to the Network constructor.
  * `size` is the number of neurons; `σ` (optional) is the activation function
  * applied to that layer. The input layer omits σ since it has no weights.
+ * @property name - Human-readable label, used only for debugging output
+ * @property size - Number of neurons in the layer
+ * @property σ - Activation function applied to this layer's pre-activations.
+ * Omitted for the input layer, which applies no activation.
  */
 export type InitialLayerData = {
   name: string
@@ -35,5 +39,27 @@ export type InitialLayerData = {
   σ?: ActivationFunctionType // Activation function (greek letter sigma)
 }
 
-export type LayerGradient = { 𝓁: number; w: NumericMatrix; b: NumericVector }
+/**
+ * The gradient of the cost function with respect to one layer's parameters,
+ * shaped like the parameters themselves so it can be applied directly.
+ * @property 𝓁 - Index of the layer these partials belong to (1-based; 0 is the
+ * input layer, which has no parameters and therefore no gradient)
+ * @property w - ∂C/∂w(𝓁), a [size][previous layer size] matrix laid out in the
+ * same row/column order as the layer's own weight matrix
+ * @property b - ∂C/∂b(𝓁), a [size] vector aligned with the layer's biases
+ */
+export type LayerGradient = {
+  𝓁: number
+  w: NumericMatrix
+  b: NumericVector
+}
+
+/**
+ * Every trainable layer's {@link LayerGradient}, ordered from the output layer
+ * (𝓁 = 𝐋) backwards to the first hidden layer (𝓁 = 1), matching the order in
+ * which {@link Network.calculateGradient} walks the layers.
+ *
+ * One entry per layer that has parameters, so its length equals the network's
+ * parameter *count* of layers, not its total parameter count.
+ */
 export type Gradient = LayerGradient[]
