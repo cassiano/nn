@@ -1,9 +1,10 @@
-import { InitialLayerData } from './types.ts'
 // Central place for project-wide constants shared across modules.
 //
 // Dataset constants (MNIST magic numbers, image dimensions, file paths) live
 // alongside their loader in mnist_loader.ts. Add any other global numeric or
 // string constants here as the project grows.
+
+import { InitialLayerData } from './types.ts'
 
 // 784 pixels                           784 x 16 = 12544 weights
 //   -> 16 (sigmoid)   -> 16 (relu)     16   x 16 =   256 weights
@@ -20,5 +21,5 @@ export const NETWORK_LAYER_CONFIG: InitialLayerData[] = [
 // η = learning rate
 export const NETWORK_LEARNING_RATE = 0.01
 
-export const EPOCHS = 1
+export const EPOCHS = 5
 export const BATCH_SIZE = 60

@@ -59,7 +59,9 @@ export type LayerGradient = {
  * (𝓁 = 𝐋) backwards to the first hidden layer (𝓁 = 1), matching the order in
  * which {@link Network.calculateGradient} walks the layers.
  *
- * One entry per layer that has parameters, so its length equals the network's
- * parameter *count* of layers, not its total parameter count.
+ * One entry per layer that has parameters, so its length is the number of
+ * trainable layers (the output layer's index, 𝐋) rather than the number of
+ * parameters. {@link Network.calculateAverageGradient} relies on that fixed
+ * length and order when it pairs up a batch.
  */
 export type Gradient = LayerGradient[]

@@ -15,15 +15,26 @@ let network: Network
 let loader: MnistLoader
 
 /**
- * Entry point: loads MNIST, builds the 784 -> 16 -> 16 -> 10 network, then runs
- * a single training pass over every image.
+ * Entry point: loads MNIST, builds the network described by
+ * {@link NETWORK_LAYER_CONFIG} (784 -> 16 -> 16 -> 10), trains it for
+ * {@link EPOCHS} epochs of mini-batch gradient descent, then scores the result
+ * on the test split.
  *
- * For each sample it loads the input, runs {@link Network.feedForward}, logs
- * the prediction alongside the true label and the cost, then calls
- * {@link Network.backPropagate} to step the weights. One pass is one epoch of
- * stochastic gradient descent; there is no shuffling or batching yet.
+ * Training is a double loop over epochs and batches of {@link BATCH_SIZE}
+ * samples. Each epoch shuffles a fresh index array and hands out consecutive
+ * slices of it, so every epoch sees the data in a different order. Only one
+ * sample is loaded into the network at a time, so each batch is accumulated
+ * first: per sample {@link Network.loadSample} → {@link Network.feedForward} →
+ * {@link Network.calculateGradient}, then
+ * {@link Network.calculateAverageGradient} turns the batch into one mean
+ * gradient and a single {@link Network.backPropagate} applies it. Only whole
+ * batches are trained, so `inputs.length % BATCH_SIZE` trailing samples are
+ * dropped each epoch.
  *
- * @returns Nothing. Resolves once every training sample has been processed.
+ * Afterwards, each test image is run through the network one at a time and the
+ * prediction, cost and running hit/miss tally are logged.
+ *
+ * @returns Nothing. Resolves once every test sample has been scored.
  * @throws If the dataset files are missing or malformed, or if the topology
  * fails the MNIST size validation.
  */

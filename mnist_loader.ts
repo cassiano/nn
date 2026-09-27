@@ -49,8 +49,9 @@ const MNIST_PATHS = {
 }
 
 /**
- * Downloads (from local .zip files bundled in ./mnist) and parses the MNIST
- * dataset, exposed as {@link TrainingData} in `trainData` / `testData`.
+ * Reads and parses the MNIST dataset, exposed as {@link TrainingData} in
+ * `trainData` / `testData`, from the local .zip files bundled in
+ * `./data/mnist`.
  *
  * The raw files are gzipped IDX binaries; pixels are normalized to [0, 1].
  */
