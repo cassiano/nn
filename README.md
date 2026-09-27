@@ -10,16 +10,16 @@ Built with **Deno** + **TypeScript** (fully type-checked, zero runtime deps).
 
 ## Status
 
-| Piece | Status |
-| --- | --- |
-| MNIST loading + parsing | ✅ Done |
-| Layer / Network classes | ✅ Done |
-| Forward pass (`z = w·a + b`, activations) | ✅ Done |
-| Cost function (MSE) | ✅ Done |
-| Per-layer gradient (chain rule, single sample) | ✅ Done |
-| Backpropagation (weight/bias update, mini-batch) | ✅ Done (`Network.backPropagate`) |
-| Batch gradient averaging | ✅ Done (`Network.calculateAverageGradient`) |
-| Hyperparameter tuning / accuracy target | 🔨 Not started |
+| Piece                                            | Status                                       |
+| ------------------------------------------------ | -------------------------------------------- |
+| MNIST loading + parsing                          | ✅ Done                                      |
+| Layer / Network classes                          | ✅ Done                                      |
+| Forward pass (`z = w·a + b`, activations)        | ✅ Done                                      |
+| Cost function (MSE)                              | ✅ Done                                      |
+| Per-layer gradient (chain rule, single sample)   | ✅ Done                                      |
+| Backpropagation (weight/bias update, mini-batch) | ✅ Done (`Network.backPropagate`)            |
+| Batch gradient averaging                         | ✅ Done (`Network.calculateAverageGradient`) |
+| Hyperparameter tuning / accuracy target          | 🔨 Not started                               |
 
 The network now trains: each sample's gradient is computed layer-by-layer,
 averaged over a batch of 60 and applied to the weights, for 5 epochs of
@@ -70,12 +70,12 @@ network harnesses).
 
 Defined by `NETWORK_LAYER_CONFIG` in `constants.ts`:
 
-| Layer | Neurons | Activation |
-| --- | --- | --- |
-| Input | 784 (28×28 pixels) | — |
-| Hidden 1 | 16 | sigmoid |
-| Hidden 2 | 16 | relu |
-| Output | 10 (digits 0–9) | softmax |
+| Layer    | Neurons            | Activation |
+| -------- | ------------------ | ---------- |
+| Input    | 784 (28×28 pixels) | —          |
+| Hidden 1 | 16                 | relu       |
+| Hidden 2 | 16                 | relu       |
+| Output   | 10 (digits 0–9)    | softmax    |
 
 Trainable parameters: the two hidden layers plus the output layer each hold a
 weight matrix plus a bias vector, initialized randomly in (-1, 1). Total:
@@ -122,21 +122,23 @@ equations in code close to their written math form.
 ## Files in detail
 
 ### `mnist_loader.ts`
+
 Parses the gzipped **IDX** files into `TrainingData` (`inputs`, `labels`).
-Images are flattened 28×28 → 784 values, normalized to `[0, 1]` by dividing by
-255. Also ships `MnistLoader.imageToText`, which renders an image as ASCII art
+Images are flattened 28×28 → 784 values, normalized to `[0, 1]` by dividing by 255. Also ships `MnistLoader.imageToText`, which renders an image as ASCII art
 using the ` ░▒▓▉█` gradient — handy for eyeballing loaded samples.
 
 #### IDX format (after gunzip)
-| Bytes | Meaning |
-| --- | --- |
-| 0–3 | Magic number (2051 images / 2049 labels) |
-| 4–7 | Number of records |
-| 8–11 | Rows (images) |
-| 12–15 | Cols (images) |
-| 16+ | Pixel/label data (one byte per value, big-endian) |
+
+| Bytes | Meaning                                           |
+| ----- | ------------------------------------------------- |
+| 0–3   | Magic number (2051 images / 2049 labels)          |
+| 4–7   | Number of records                                 |
+| 8–11  | Rows (images)                                     |
+| 12–15 | Cols (images)                                     |
+| 16+   | Pixel/label data (one byte per value, big-endian) |
 
 ### `utils.ts`
+
 Tiny functional helpers used throughout:
 
 - `timesForEach` / `timesMap` / `timesReduce` / `timesForEachN` / `timesMapN` /
@@ -157,6 +159,7 @@ Tiny functional helpers used throughout:
 Every helper returns fresh arrays; none of them mutate their operands.
 
 ### `activation.ts`
+
 Pure activation functions and their derivatives (derivatives take the
 pre-activation `z`, as needed for backprop):
 sigmoid, ReLU, tanh and softmax, each numerically stable (sigmoid/softmax
@@ -164,6 +167,7 @@ avoid overflow/underflow on extreme inputs). `softmax` reports a constant
 derivative of 1, so the output layer's δ stays the plain ∂C/∂a.
 
 ### `layer.ts`
+
 One layer = one weight matrix `w`, one bias vector `b` and its neuron state
 `z`, `a`, `δ`. The input layer only stores raw inputs and ignores
 `w`/`b`/`z`/`δ`/`σ`. `calculatePostActivationValues()` recomputes `z` then `a`
@@ -171,6 +175,7 @@ for the current sample; the partial derivatives `∂C/∂w`, `∂C/∂b` are bui
 `Network.calculateGradient` and stored on the network, not here.
 
 ### `network.ts`
+
 Ties layers together; owns the current sample's one-hot target `y`, exposes
 `inputLayer` / `outputLayer`, drives the forward pass, and computes the cost.
 `calculateGradient()` returns one `LayerGradient` per trainable layer;
