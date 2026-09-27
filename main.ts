@@ -61,10 +61,10 @@ const main = async () => {
 
     shuffle(trainDataIndexes)
 
+    let avgCost = 0
+
     for (let j = 0; j < totalBatches; j++) {
-      console.log(
-        `Processing batch ${j + 1} (of ${totalBatches}) in epoch ${i + 1}`,
-      )
+      console.log(`Processing batch ${j + 1}/${totalBatches} of epoch ${i + 1}`)
 
       const batchGradients: Gradient[] = []
 
@@ -80,6 +80,10 @@ const main = async () => {
       console.log('Updating network parameters')
 
       const averageGradient = network.calculateAverageGradient(batchGradients)
+
+      avgCost = (avgCost * j + network.cost) / (j + 1)
+
+      console.log({ avgCost })
 
       network.backPropagate(averageGradient)
     }
@@ -102,14 +106,16 @@ const main = async () => {
     if (predictedDigit === testLabels[i]) hits++
     else misses++
 
-    console.log({
-      i,
-      expected: testLabels[i],
-      predictedDigit,
-      cost: network.cost,
-      hits,
-      misses,
-    })
+    if ((i + 1) % 1000 === 0)
+      console.log({
+        i,
+        expected: testLabels[i],
+        predictedDigit,
+        cost: network.cost,
+        hits,
+        misses,
+        accuracy: hits / testInputs.length,
+      })
   }
 }
 
