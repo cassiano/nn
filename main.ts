@@ -1,7 +1,13 @@
-import { NETWORK_LAYER_CONFIG, NETWORK_LEARNING_RATE } from './constants.ts'
+import {
+  BATCH_SIZE,
+  NETWORK_LAYER_CONFIG,
+  NETWORK_LEARNING_RATE,
+  EPOCHS,
+} from './constants.ts'
 import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
 import { assertIsNotNull } from './utils.ts'
+import { Gradient } from './types.ts'
 
 // The network and loader are kept at module scope (rather than local to `main`) so
 // they stay accessible (and inspectable) from the Deno console after training.
@@ -26,6 +32,7 @@ const main = async () => {
   loader = new MnistLoader()
   await loader.load(console.log)
   assertIsNotNull(loader.trainData)
+  assertIsNotNull(loader.testData)
 
   // Build the network topology and learning rate (η).
   network = new Network(NETWORK_LAYER_CONFIG, NETWORK_LEARNING_RATE)
@@ -33,28 +40,58 @@ const main = async () => {
   console.log({ parameterCount: network.parameterCount })
 
   const { inputs, labels } = loader.trainData
+  const totalBatches = Math.trunc(inputs.length / BATCH_SIZE)
 
+  for (let i = 0; i < EPOCHS; i++) {
+    console.log(`Starting epoch ${(i = 1)}`)
+
+    for (let j = 0; j < totalBatches; j++) {
+      console.log(`Processing batch ${j + 1} of ${totalBatches}`)
+
+      const batchGradients: Gradient[] = []
+
+      for (let k = 0; k < BATCH_SIZE; k++) {
+        const sampleIndex = j * BATCH_SIZE + k
+
+        network.loadSample(inputs[sampleIndex], labels[sampleIndex])
+        network.feedForward()
+
+        batchGradients.push(network.calculateGradient())
+      }
+
+      console.log('Updating network parameters')
+
+      const averageGradient = network.calculateAverageGradient(batchGradients)
+
+      network.backPropagate(averageGradient)
+    }
+  }
+
+  console.log('-----------------------------------------')
+  console.log('Checking network accuracy with test data:')
+  console.log('-----------------------------------------')
+
+  const { inputs: testInputs, labels: testLabels } = loader.testData
   let hits = 0
+  let misses = 0
 
-  // Single training pass: run a forward pass for every training image and
-  // track the running average of mean squared error (MSE) as a loss metric.
-  for (let i = 0; i < inputs.length; i++) {
+  for (let i = 0; i < testInputs.length; i++) {
     network.loadSample(inputs[i], labels[i])
     network.feedForward()
 
     const predictedDigit = network.predictedDigit()
 
-    if (predictedDigit === labels[i]) hits++
+    if (predictedDigit === testLabels[i]) hits++
+    else misses++
 
     console.log({
       i,
-      expected: labels[i],
+      expected: testLabels[i],
       predictedDigit,
       cost: network.cost,
       hits,
+      misses,
     })
-
-    network.backPropagate()
   }
 }
 

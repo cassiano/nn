@@ -268,9 +268,7 @@ export class Network {
    *   b(𝓁) ← b(𝓁) - η·∂C/∂b(𝓁)
    *
    * Because ∂C is added with a negated, scaled matrix/vector, weights and biases
-   * move *against* the gradient, reducing the cost on the current sample. Calls
-   * {@link Network.calculateGradient}, so {@link Network.feedForward} and
-   * {@link Network.loadSample} must have run first.
+   * move *against* the gradient, reducing the cost on the current sample.
    *
    * Mutates each layer's `w` and `b` in place (replacing them with new arrays)
    * and returns nothing; a single sample per call, so this is the
@@ -279,11 +277,9 @@ export class Network {
    * @throws If any layer except the input has no activation function σ
    * configured, or if a weight/bias shape does not line up with its gradient.
    */
-  backPropagate() {
-    const gradient = this.calculateGradient()
-
+  backPropagate(gradient: Gradient) {
     for (const { 𝓁, b, w } of gradient) {
-      const layer = this.layers[𝓁]
+      const layer = this.findLayer(𝓁)
 
       layer.w = addMatrices(layer.w, multiplyMatrixByScalar(w, -this.η))
       layer.b = addVectors(layer.b, multiplyVectorByScalar(b, -this.η))
@@ -296,5 +292,47 @@ export class Network {
     return this.outputLayer.a.findIndex(
       value => value === predictedDigitProbability,
     )
+  }
+
+  calculateAverageGradient(gradients: Gradient[]): Gradient {
+    if (gradients.length === 0)
+      throw new Error(`Cannot calculate average gradient (empty collection)`)
+
+    const firstGradient = gradients[0]
+    const size = gradients.length
+    const averageGradient: Gradient = []
+
+    // Calculate the w and b averages per layer.
+    for (let i = 1; i < this.𝐋; i++) {
+      const firstGradientCurrentLayer = firstGradient[i - 1]
+
+      let avgW = firstGradientCurrentLayer.w
+      let avgB = firstGradientCurrentLayer.b
+
+      for (let j = 1; j < gradients.length; j++) {
+        gradients.forEach(gradient => {
+          avgW = addMatrices(avgW, gradient[i - 1].w)
+          avgB = addVectors(avgB, gradient[i - 1].b)
+        })
+      }
+
+      const averageLayerGradient: LayerGradient = {
+        𝓁: firstGradientCurrentLayer.𝓁,
+        w: multiplyMatrixByScalar(avgW, 1 / size),
+        b: multiplyVectorByScalar(avgB, 1 / size),
+      }
+
+      averageGradient.push(averageLayerGradient)
+    }
+
+    return averageGradient
+  }
+
+  findLayer(𝓁: number): Layer {
+    const layer = this.layers.find(layer => layer.𝓁 === 𝓁)
+
+    if (!layer) throw new Error(`Layer with 𝓁=${𝓁} not found`)
+
+    return layer
   }
 }
