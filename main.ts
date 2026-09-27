@@ -1,3 +1,4 @@
+import { NETWORK_LAYER_CONFIG, NETWORK_LEARNING_RATE } from './constants.ts'
 import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
 import { assertIsNotNull } from './utils.ts'
@@ -21,37 +22,24 @@ let loader: MnistLoader
  * fails the MNIST size validation.
  */
 const main = async () => {
-  // 1. Load the MNIST dataset from the gzipped IDX files in ./mnist.
+  // Load the MNIST dataset from the gzipped IDX files in ./mnist.
   loader = new MnistLoader()
   await loader.load(console.log)
   assertIsNotNull(loader.trainData)
 
-  // 2. Build the network topology and learning rate (η).
-  //    784 pixels                           784 x 16 = 12544 weights
-  //      -> 16 (sigmoid)   -> 16 (relu)     16   x 16 =   256 weights
-  //        -> 10 (softmax)                  16   x 10 =   160 weights
-  //    That's 12960 weights + 42 biases (for a total of 13002 parameters).
-  network = new Network(
-    [
-      { name: 'Input Layer', size: 784 }, // MNIST_IMAGE_COLS * MNIST_IMAGE_ROWS
-      { name: 'Hidden Layer 1', size: 16, σ: 'sigmoid' },
-      { name: 'Hidden Layer 2', size: 16, σ: 'relu' },
-      { name: 'Output Layer', size: 10, σ: 'softmax' }, // One neuron per digit (0-9)
-    ],
-    0.01, // η = learning rate
-  )
+  // Build the network topology and learning rate (η).
+  network = new Network(NETWORK_LAYER_CONFIG, NETWORK_LEARNING_RATE)
 
   console.log({ parameterCount: network.parameterCount })
 
-  const images = loader.trainData.inputs
-  const labels = loader.trainData.labels
+  const { inputs, labels } = loader.trainData
 
   let hits = 0
 
-  // 3. Single training pass: run a forward pass for every training image and
-  //    track the running average of mean squared error (MSE) as a loss metric.
-  for (let i = 0; i < images.length; i++) {
-    network.loadSample(images[i], labels[i])
+  // Single training pass: run a forward pass for every training image and
+  // track the running average of mean squared error (MSE) as a loss metric.
+  for (let i = 0; i < inputs.length; i++) {
+    network.loadSample(inputs[i], labels[i])
     network.feedForward()
 
     const predictedDigit = network.predictedDigit()
