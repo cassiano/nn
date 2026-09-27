@@ -17,6 +17,7 @@ import {
 } from './types.ts'
 import { Layer } from './layer.ts'
 import { hadamardProduct } from './utils.ts'
+import { BATCH_SIZE } from './constants.ts'
 import {
   MNIST_OUTPUT_SIZE,
   MNIST_IMAGE_COLS,
@@ -298,8 +299,14 @@ export class Network {
       const layer = this.layers[𝓁]
       if (!layer) throw new Error(`Layer ${𝓁} not found`)
 
-      layer.w = addMatrices(layer.w, multiplyMatrixByScalar(w, -this.η))
-      layer.b = addVectors(layer.b, multiplyVectorByScalar(b, -this.η))
+      layer.w = addMatrices(
+        layer.w,
+        multiplyMatrixByScalar(w, -this.η * BATCH_SIZE),
+      )
+      layer.b = addVectors(
+        layer.b,
+        multiplyVectorByScalar(b, -this.η * BATCH_SIZE),
+      )
     }
   }
 
