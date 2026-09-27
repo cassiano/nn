@@ -356,6 +356,8 @@ export class Network {
     // sample (the first sample supplies the 𝓁 labels and the entry order).
     for (let i = 0; i < this.𝐋; i++) {
       const 𝓁 = firstGradient[i].𝓁
+
+      // Initialize both sums with 0-filled matrixes/vectors.
       let summedW = multiplyMatrixByScalar(firstGradient[i].w, 0)
       let summedB = multiplyVectorByScalar(firstGradient[i].b, 0)
 
