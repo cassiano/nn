@@ -1,4 +1,4 @@
-import { ActivationFunctionType } from './layer.ts'
+import { InitialLayerData } from './types.ts'
 // Central place for project-wide constants shared across modules.
 //
 // Dataset constants (MNIST magic numbers, image dimensions, file paths) live
@@ -10,15 +10,15 @@ import { ActivationFunctionType } from './layer.ts'
 //     -> 10 (softmax)                  16   x 10 =   160 weights
 //
 // 12960 weights + 42 biases (for a total of 13002 parameters).
-export const NETWORK_LAYER_CONFIG = [
+export const NETWORK_LAYER_CONFIG: InitialLayerData[] = [
   { name: 'Input Layer', size: 784 }, // MNIST_IMAGE_COLS * MNIST_IMAGE_ROWS
-  { name: 'Hidden Layer 1', size: 16, σ: 'sigmoid' as ActivationFunctionType },
-  { name: 'Hidden Layer 2', size: 16, σ: 'relu' as ActivationFunctionType },
-  { name: 'Output Layer', size: 10, σ: 'softmax' as ActivationFunctionType }, // One neuron per digit (0-9)
+  { name: 'Hidden Layer 1', size: 16, σ: 'relu' },
+  { name: 'Hidden Layer 2', size: 16, σ: 'relu' },
+  { name: 'Output Layer', size: 10, σ: 'softmax' }, // One neuron per digit (0-9)
 ]
 
 // η = learning rate
 export const NETWORK_LEARNING_RATE = 0.01
 
-export const EPOCHS = 5
+export const EPOCHS = 1
 export const BATCH_SIZE = 60

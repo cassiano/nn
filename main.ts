@@ -6,7 +6,7 @@ import {
 } from './constants.ts'
 import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
-import { assertIsNotNull } from './utils.ts'
+import { assertIsNotNull, timesMap, shuffle } from './utils.ts'
 import { Gradient } from './types.ts'
 
 // The network and loader are kept at module scope (rather than local to `main`) so
@@ -43,15 +43,22 @@ const main = async () => {
   const totalBatches = Math.trunc(inputs.length / BATCH_SIZE)
 
   for (let i = 0; i < EPOCHS; i++) {
-    console.log(`Starting epoch ${(i = 1)}`)
+    console.log('----------------')
+    console.log(`Starting epoch ${i + 1}`)
+    console.log('----------------')
+
+    const trainDataIndexes = timesMap(inputs.length, i => i)
+    shuffle(trainDataIndexes)
 
     for (let j = 0; j < totalBatches; j++) {
-      console.log(`Processing batch ${j + 1} of ${totalBatches}`)
+      console.log(
+        `Processing batch ${j + 1} (of ${totalBatches}) in epoch ${i + 1}`,
+      )
 
       const batchGradients: Gradient[] = []
 
       for (let k = 0; k < BATCH_SIZE; k++) {
-        const sampleIndex = j * BATCH_SIZE + k
+        const sampleIndex = trainDataIndexes[j * BATCH_SIZE + k]
 
         network.loadSample(inputs[sampleIndex], labels[sampleIndex])
         network.feedForward()
@@ -76,7 +83,7 @@ const main = async () => {
   let misses = 0
 
   for (let i = 0; i < testInputs.length; i++) {
-    network.loadSample(inputs[i], labels[i])
+    network.loadSample(testInputs[i], testLabels[i])
     network.feedForward()
 
     const predictedDigit = network.predictedDigit()

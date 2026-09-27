@@ -251,7 +251,7 @@ export class Network {
           transposeMatrix(toMatrix(previousLayer.a)),
         ),
         // [/doc_img/network.ts/2026-09-26-18-21-43.png]
-        b: currentLayer.δ,
+        b: [...currentLayer.δ],
       }
 
       gradient.push(layerGradient)
@@ -279,7 +279,8 @@ export class Network {
    */
   backPropagate(gradient: Gradient) {
     for (const { 𝓁, b, w } of gradient) {
-      const layer = this.findLayer(𝓁)
+      const layer = this.layers[𝓁]
+      if (!layer) throw new Error(`Layer ${𝓁} not found`)
 
       layer.w = addMatrices(layer.w, multiplyMatrixByScalar(w, -this.η))
       layer.b = addVectors(layer.b, multiplyVectorByScalar(b, -this.η))
@@ -294,6 +295,25 @@ export class Network {
     )
   }
 
+  /**
+   * Averages a batch of per-sample gradients into one gradient, so a whole
+   * batch can be applied in a single {@link Network.backPropagate} step.
+   *
+   * Every sample contributes weight exactly `1 / gradients.length`, making this
+   * the true mean of the batch rather than a weighted or rescaled sum. Layers
+   * are matched between samples by their {@link LayerGradient.𝓁} index instead
+   * of by array position, and the result carries one entry per layer present in
+   * the batch, so no trainable layer can be silently skipped.
+   *
+   * @param gradients One {@link Gradient} per sample, each covering the same
+   * trainable layers. The order of entries within a gradient does not matter.
+   * @returns The mean {@link Gradient}, one {@link LayerGradient} per layer in
+   * the same order as the batch entries, whose `w` and `b` match the shapes of
+   * the corresponding layer's parameters.
+   * @throws If `gradients` is empty, or if a sample has no entry for a layer
+   * that the other samples provide, or if two samples' entries for the same
+   * layer have mismatched shapes.
+   */
   calculateAverageGradient(gradients: Gradient[]): Gradient {
     if (gradients.length === 0)
       throw new Error(`Cannot calculate average gradient (empty collection)`)
@@ -303,36 +323,30 @@ export class Network {
     const averageGradient: Gradient = []
 
     // Calculate the w and b averages per layer.
-    for (let i = 1; i < this.𝐋; i++) {
-      const firstGradientCurrentLayer = firstGradient[i - 1]
+    for (let i = 0; i < this.𝐋; i++) {
+      const 𝓁 = firstGradient[i].𝓁
+      let summedW = multiplyMatrixByScalar(firstGradient[i].w, 0)
+      let summedB = multiplyVectorByScalar(firstGradient[i].b, 0)
 
-      let avgW = firstGradientCurrentLayer.w
-      let avgB = firstGradientCurrentLayer.b
+      for (const gradient of gradients) {
+        if (gradient[i].𝓁 !== 𝓁)
+          throw new Error(
+            `Mixing distinct 𝓁 values ($(gradient[i].𝓁) and $(headGradient[i].𝓁))`,
+          )
 
-      for (let j = 1; j < gradients.length; j++) {
-        gradients.forEach(gradient => {
-          avgW = addMatrices(avgW, gradient[i - 1].w)
-          avgB = addVectors(avgB, gradient[i - 1].b)
-        })
+        summedW = addMatrices(summedW, gradient[i].w)
+        summedB = addVectors(summedB, gradient[i].b)
       }
 
       const averageLayerGradient: LayerGradient = {
-        𝓁: firstGradientCurrentLayer.𝓁,
-        w: multiplyMatrixByScalar(avgW, 1 / size),
-        b: multiplyVectorByScalar(avgB, 1 / size),
+        𝓁,
+        w: multiplyMatrixByScalar(summedW, 1 / size),
+        b: multiplyVectorByScalar(summedB, 1 / size),
       }
 
       averageGradient.push(averageLayerGradient)
     }
 
     return averageGradient
-  }
-
-  findLayer(𝓁: number): Layer {
-    const layer = this.layers.find(layer => layer.𝓁 === 𝓁)
-
-    if (!layer) throw new Error(`Layer with 𝓁=${𝓁} not found`)
-
-    return layer
   }
 }
