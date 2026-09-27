@@ -30,7 +30,7 @@ const main = async () => {
   //    784 pixels                           784 x 16 = 12544 weights
   //      -> 16 (sigmoid)   -> 16 (relu)     16   x 16 =   256 weights
   //        -> 10 (softmax)                  16   x 10 =   160 weights
-  //    That's 12960 weights + 42 biases. Forward pass only (no backprop yet).
+  //    That's 12960 weights + 42 biases (for a total of 13002 parameters).
   network = new Network(
     [
       { name: 'Input Layer', size: 784 }, // MNIST_IMAGE_COLS * MNIST_IMAGE_ROWS
