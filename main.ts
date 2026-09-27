@@ -52,13 +52,13 @@ const main = async () => {
 
   const { inputs, labels } = loader.trainData
   const totalBatches = Math.trunc(inputs.length / BATCH_SIZE)
+  const trainDataIndexes = timesMap(inputs.length, i => i)
 
   for (let i = 0; i < EPOCHS; i++) {
     console.log('----------------')
     console.log(`Starting epoch ${i + 1}`)
     console.log('----------------')
 
-    const trainDataIndexes = timesMap(inputs.length, i => i)
     shuffle(trainDataIndexes)
 
     for (let j = 0; j < totalBatches; j++) {
