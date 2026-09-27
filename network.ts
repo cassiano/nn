@@ -291,10 +291,10 @@ export class Network {
   }
 
   predictedDigit() {
-    const predictedDigitPercentage = Math.max(...this.outputLayer.a)
+    const predictedDigitProbability = Math.max(...this.outputLayer.a)
 
     return this.outputLayer.a.findIndex(
-      value => value === predictedDigitPercentage,
+      value => value === predictedDigitProbability,
     )
   }
 }

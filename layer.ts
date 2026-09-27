@@ -102,7 +102,7 @@ export class Layer {
   ) {
     this.𝓁 = Layer.id++
 
-    if (this.𝓁 > 0) this.initializeNetworkParameters()
+    if (!this.isInputLayer) this.initializeNetworkParameters()
   }
 
   /**
@@ -110,7 +110,9 @@ export class Layer {
    * every bias. The input layer reports 0, since it has none.
    */
   get parameterCount() {
-    return this.𝓁 === 0 ? 0 : this.w.length * this.w[0].length + this.b.length
+    return this.isInputLayer
+      ? 0
+      : this.w.length * this.w[0].length + this.b.length
   }
 
   /**
