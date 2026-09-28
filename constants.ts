@@ -7,8 +7,8 @@
 import { InitialLayerData } from './types.ts'
 
 // 784 pixels                           784 x 16 = 12544 weights
-//   -> 16 (sigmoid)   -> 16 (relu)     16   x 16 =   256 weights
-//     -> 10 (softmax)                  16   x 10 =   160 weights
+//   -> 16 (sigmoid)   -> 16 (relu)     16  x 16 =   256 weights
+//     -> 10 (softmax)                  16  x 10 =   160 weights
 //
 // 12960 weights + 42 biases (for a total of 13002 parameters).
 export const NETWORK_LAYER_CONFIG: InitialLayerData[] = [
