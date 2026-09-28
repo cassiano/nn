@@ -60,13 +60,16 @@ const main = async () => {
   const trainDataIndexes = timesMap(inputs.length, i => i)
 
   let avgCost = 0
-  let hits = 0
-  let misses = 0
+  let hits
+  let misses
 
   for (let i = 0; i < EPOCHS; i++) {
     console.log('----------------')
     console.log(`Starting epoch ${i + 1}`)
     console.log('----------------')
+
+    hits = 0
+    misses = 0
 
     shuffle(trainDataIndexes)
 
@@ -94,7 +97,7 @@ const main = async () => {
         cost: network.cost,
         hits,
         misses,
-        accumulatedAccuracy: `${formatWithDecimalPlaces(hits / ((i * totalBatches + (j + 1)) * BATCH_SIZE), 2)}%`,
+        epochAccuracy: `${formatWithDecimalPlaces(hits / ((j + 1) * BATCH_SIZE), 2)}%`,
       })
 
       console.log('Updating network parameters')
