@@ -363,8 +363,7 @@ export class Network {
     // Calculate the w and b averages per layer, pairing entry i of every
     // sample (the first sample supplies the 𝓁 labels and the entry order).
     for (let i = 0; i < this.𝐋; i++) {
-      const 𝓁 = firstGradient[i].𝓁
-      const { w, b } = firstGradient[i]
+      const { w, b, 𝓁 } = firstGradient[i]
 
       // Initialize both sums with 0-filled matrixes/vectors.
       let summedW = initializeMatrix(w.length, w[0].length, 0)
