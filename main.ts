@@ -54,14 +54,14 @@ const main = async () => {
   const totalBatches = Math.trunc(inputs.length / BATCH_SIZE)
   const trainDataIndexes = timesMap(inputs.length, i => i)
 
+  let avgCost = 0
+
   for (let i = 0; i < EPOCHS; i++) {
     console.log('----------------')
     console.log(`Starting epoch ${i + 1}`)
     console.log('----------------')
 
     shuffle(trainDataIndexes)
-
-    let avgCost = 0
 
     for (let j = 0; j < totalBatches; j++) {
       console.log(`Processing batch ${j + 1}/${totalBatches} of epoch ${i + 1}`)
@@ -81,7 +81,9 @@ const main = async () => {
 
       const averageGradient = network.calculateAverageGradient(batchGradients)
 
-      avgCost = (avgCost * j + network.cost) / (j + 1)
+      avgCost =
+        ((i * totalBatches + j) * avgCost + network.cost) /
+        (i * totalBatches + (j + 1))
 
       console.log({ avgCost })
 
@@ -114,9 +116,20 @@ const main = async () => {
         cost: network.cost,
         hits,
         misses,
-        accuracy: hits / testInputs.length,
+        accuracy: hits / i,
       })
   }
+
+  console.log('--------------')
+  console.log('Final results:')
+  console.log('--------------')
+
+  console.log({
+    cost: network.cost,
+    hits,
+    misses,
+    accuracy: hits / testInputs.length,
+  })
 }
 
 await main()
