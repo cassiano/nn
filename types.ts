@@ -49,7 +49,7 @@ export type InitialLayerData = {
  * @property b - ∂C/∂b(𝓁), a [size] vector aligned with the layer's biases
  */
 export type LayerGradient = {
-  𝓁: number
+  𝓁: number // [1..𝐋]
   w: NumericMatrix
   b: NumericVector
 }
