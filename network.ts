@@ -363,10 +363,11 @@ export class Network {
     // sample (the first sample supplies the 𝓁 labels and the entry order).
     for (let i = 0; i < this.𝐋; i++) {
       const 𝓁 = firstGradient[i].𝓁
+      const { w, b } = firstGradient[i]
 
       // Initialize both sums with 0-filled matrixes/vectors.
-      let summedW = multiplyMatrixByScalar(firstGradient[i].w, 0)
-      let summedB = multiplyVectorByScalar(firstGradient[i].b, 0)
+      let summedW = initializeMatrix(w.length, w[0].length, 0)
+      let summedB = initializeVector(b.length, 0)
 
       for (const gradient of gradients) {
         if (gradient[i].𝓁 !== 𝓁)
