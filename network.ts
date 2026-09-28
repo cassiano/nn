@@ -17,8 +17,13 @@ import {
   Gradient,
 } from './types.ts'
 import { Layer } from './layer.ts'
-import { hadamardProduct, initializeVector } from './utils.ts'
+import {
+  hadamardProduct,
+  initializeVector,
+  divideMatrixByScalar,
+} from './utils.ts'
 import { BATCH_SIZE } from './constants.ts'
+import { divideVectorByScalar } from './utils.ts'
 import {
   MNIST_OUTPUT_SIZE,
   MNIST_IMAGE_COLS,
@@ -381,8 +386,8 @@ export class Network {
 
       const averageLayerGradient: LayerGradient = {
         𝓁,
-        w: multiplyMatrixByScalar(summedW, 1 / size),
-        b: multiplyVectorByScalar(summedB, 1 / size),
+        w: divideMatrixByScalar(summedW, size),
+        b: divideVectorByScalar(summedB, size),
       }
 
       averageGradient.push(averageLayerGradient)

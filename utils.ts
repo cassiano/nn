@@ -432,6 +432,15 @@ export const multiplyMatrixByScalar = (
   )
 }
 
+export const divideMatrixByScalar = (
+  matrix: NumericMatrix,
+  scalar: number,
+): NumericMatrix => {
+  if (scalar === 0) throw new Error('Cannot divide matrix by 0')
+
+  return multiplyMatrixByScalar(matrix, 1 / scalar)
+}
+
 /**
  * Element-wise (Hadamard) product of two equally sized vectors.
  *
@@ -487,6 +496,15 @@ export const multiplyVectorByScalar = (
   scalar: number,
 ): NumericVector => {
   return vector.map(value => value * scalar)
+}
+
+export const divideVectorByScalar = (
+  vector: NumericVector,
+  scalar: number,
+): NumericVector => {
+  if (scalar === 0) throw new Error('Cannot divide vector by 0')
+
+  return multiplyVectorByScalar(vector, 1 / scalar)
 }
 
 /**
