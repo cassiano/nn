@@ -507,3 +507,6 @@ export const shuffle = (array: number[]): void => {
     ;[array[i], array[j]] = [array[j], array[i]]
   }
 }
+
+export const formatWithDecimalPlaces = (value: number, decimalPlaces: number) =>
+  Math.round(value * 100 * 10 ** decimalPlaces) / 10 ** decimalPlaces

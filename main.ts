@@ -6,7 +6,12 @@ import {
 } from './constants.ts'
 import { MnistLoader } from './mnist_loader.ts'
 import { Network } from './network.ts'
-import { assertIsNotNull, timesMap, shuffle } from './utils.ts'
+import {
+  assertIsNotNull,
+  timesMap,
+  shuffle,
+  formatWithDecimalPlaces,
+} from './utils.ts'
 import { Gradient } from './types.ts'
 
 // The network and loader are kept at module scope (rather than local to `main`) so
@@ -55,6 +60,8 @@ const main = async () => {
   const trainDataIndexes = timesMap(inputs.length, i => i)
 
   let avgCost = 0
+  let hits = 0
+  let misses = 0
 
   for (let i = 0; i < EPOCHS; i++) {
     console.log('----------------')
@@ -74,8 +81,21 @@ const main = async () => {
         network.loadSample(inputs[sampleIndex], labels[sampleIndex])
         network.feedForward()
 
+        const predictedDigit = network.predictedDigit()
+
+        if (predictedDigit === labels[sampleIndex]) hits++
+        else misses++
+
         batchGradients.push(network.calculateGradient())
       }
+
+      console.log({
+        i,
+        cost: network.cost,
+        hits,
+        misses,
+        accumulatedAccuracy: `${formatWithDecimalPlaces(hits / ((i * totalBatches + (j + 1)) * BATCH_SIZE), 2)}%`,
+      })
 
       console.log('Updating network parameters')
 
@@ -96,8 +116,9 @@ const main = async () => {
   console.log('-----------------------------------------')
 
   const { inputs: testInputs, labels: testLabels } = loader.testData
-  let hits = 0
-  let misses = 0
+
+  hits = 0
+  misses = 0
 
   for (let i = 0; i < testInputs.length; i++) {
     network.loadSample(testInputs[i], testLabels[i])
@@ -116,7 +137,7 @@ const main = async () => {
         cost: network.cost,
         hits,
         misses,
-        accuracy: hits / i,
+        effectiveAccuracy: `${formatWithDecimalPlaces(hits / (i + 1), 2)}%`,
       })
   }
 
@@ -128,7 +149,7 @@ const main = async () => {
     cost: network.cost,
     hits,
     misses,
-    accuracy: hits / testInputs.length,
+    finalAccuracy: `${formatWithDecimalPlaces(hits / testInputs.length, 2)}%`,
   })
 }
 
