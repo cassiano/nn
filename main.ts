@@ -13,6 +13,7 @@ import {
   formatWithDecimalPlaces,
 } from './utils.ts'
 import { Gradient } from './types.ts'
+import { timesForEach } from './utils.ts'
 
 // The network and loader are kept at module scope (rather than local to `main`) so
 // they stay accessible (and inspectable) from the Deno console after training.
@@ -60,16 +61,16 @@ const main = async () => {
   const trainingDataIndexes = timesMap(inputs.length, i => i)
 
   let avgCost = 0
-  let hits
-  let misses
+  let hits: number
+  let misses: number
 
-  for (let epochIdx = 0; epochIdx < EPOCHS; epochIdx++) {
+  timesForEach(EPOCHS, epochIdx => {
     hits = 0
     misses = 0
 
     shuffle(trainingDataIndexes)
 
-    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+    timesForEach(totalBatches, batchIdx => {
       console.clear()
       console.log(
         `Processing batch ${batchIdx + 1}/${totalBatches} of epoch ${epochIdx + 1}`,
@@ -77,7 +78,7 @@ const main = async () => {
 
       const batchGradients: Gradient[] = []
 
-      for (let batchImageIdx = 0; batchImageIdx < BATCH_SIZE; batchImageIdx++) {
+      timesForEach(BATCH_SIZE, batchImageIdx => {
         const sampleIndex =
           trainingDataIndexes[batchIdx * BATCH_SIZE + batchImageIdx]
 
@@ -90,7 +91,7 @@ const main = async () => {
         else misses++
 
         batchGradients.push(network.calculateGradient())
-      }
+      })
 
       avgCost =
         ((epochIdx * totalBatches + batchIdx) * avgCost + network.cost) /
@@ -109,8 +110,8 @@ const main = async () => {
       const averageGradient = network.calculateAverageGradient(batchGradients)
 
       network.backPropagate(averageGradient)
-    }
-  }
+    })
+  })
 
   console.log('-----------------------------------------')
   console.log('Checking network accuracy with test data:')
@@ -121,7 +122,7 @@ const main = async () => {
   hits = 0
   misses = 0
 
-  for (let i = 0; i < testInputs.length; i++) {
+  timesForEach(testInputs.length, i => {
     network.loadSample(testInputs[i], testLabels[i])
     network.feedForward()
 
@@ -140,7 +141,7 @@ const main = async () => {
         misses,
         effectiveAccuracy: `${formatWithDecimalPlaces(hits / (i + 1), 2)}%`,
       })
-  }
+  })
 
   console.log('--------------')
   console.log('Final results:')

@@ -23,7 +23,7 @@ import {
   divideMatrixByScalar,
 } from './utils.ts'
 import { BATCH_SIZE } from './constants.ts'
-import { divideVectorByScalar } from './utils.ts'
+import { divideVectorByScalar, timesForEach } from './utils.ts'
 import {
   MNIST_OUTPUT_SIZE,
   MNIST_IMAGE_COLS,
@@ -367,7 +367,7 @@ export class Network {
 
     // Calculate the w and b averages per layer, pairing entry i of every
     // sample (the first sample supplies the 𝓁 labels and the entry order).
-    for (let i = 0; i < this.𝐋; i++) {
+    timesForEach(this.𝐋, i => {
       const { w, b, 𝓁 } = firstGradient[i]
 
       // Initialize both sums with 0-filled matrixes/vectors.
@@ -391,7 +391,7 @@ export class Network {
       }
 
       averageGradient.push(averageLayerGradient)
-    }
+    })
 
     return averageGradient
   }
