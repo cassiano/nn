@@ -47,7 +47,7 @@ const main = async () => {
   // Load the MNIST dataset from the gzipped IDX files in ./mnist.
   loader = new MnistLoader()
   await loader.load(console.log)
-  assertIsNotNull(loader.trainData)
+  assertIsNotNull(loader.trainingData)
   assertIsNotNull(loader.testData)
 
   // Build the network topology and learning rate (η).
@@ -55,9 +55,9 @@ const main = async () => {
 
   console.log({ parameterCount: network.parameterCount })
 
-  const { inputs, labels } = loader.trainData
+  const { inputs, labels } = loader.trainingData
   const totalBatches = Math.trunc(inputs.length / BATCH_SIZE)
-  const trainDataIndexes = timesMap(inputs.length, i => i)
+  const trainingDataIndexes = timesMap(inputs.length, i => i)
 
   let avgCost = 0
   let hits
@@ -71,7 +71,7 @@ const main = async () => {
     hits = 0
     misses = 0
 
-    shuffle(trainDataIndexes)
+    shuffle(trainingDataIndexes)
 
     for (let j = 0; j < totalBatches; j++) {
       console.log(`Processing batch ${j + 1}/${totalBatches} of epoch ${i + 1}`)
@@ -79,7 +79,7 @@ const main = async () => {
       const batchGradients: Gradient[] = []
 
       for (let k = 0; k < BATCH_SIZE; k++) {
-        const sampleIndex = trainDataIndexes[j * BATCH_SIZE + k]
+        const sampleIndex = trainingDataIndexes[j * BATCH_SIZE + k]
 
         network.loadSample(inputs[sampleIndex], labels[sampleIndex])
         network.feedForward()

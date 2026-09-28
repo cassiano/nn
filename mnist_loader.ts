@@ -50,7 +50,7 @@ const MNIST_PATHS = {
 
 /**
  * Reads and parses the MNIST dataset, exposed as {@link TrainingData} in
- * `trainData` / `testData`, from the local .zip files bundled in
+ * `trainingData` / `testData`, from the local .zip files bundled in
  * `./data/mnist`.
  *
  * The raw files are gzipped IDX binaries; pixels are normalized to [0, 1].
@@ -61,10 +61,10 @@ export class MnistLoader {
    * succeeds. `inputs` holds one flattened 784-value image per row and
    * `labels` the matching digit for each.
    */
-  trainData: TrainingData | null = null
+  trainingData: TrainingData | null = null
 
   /**
-   * The parsed test split, shaped like {@link MnistLoader.trainData}, or `null`
+   * The parsed test split, shaped like {@link MnistLoader.trainingData}, or `null`
    * until {@link MnistLoader.load} succeeds.
    */
   testData: TrainingData | null = null
@@ -78,14 +78,14 @@ export class MnistLoader {
 
   /**
    * Reads and parses all four gzipped IDX files and stores the results in
-   * {@link MnistLoader.trainData} and {@link MnistLoader.testData}.
+   * {@link MnistLoader.trainingData} and {@link MnistLoader.testData}.
    *
    * Does nothing when {@link MnistLoader.loaded} is already true, so it is safe
    * to call more than once.
    *
    * @param onProgress Optional callback invoked with human-readable status
    * messages as each file is read, for progress display. Omit it to stay quiet.
-   * @returns Nothing; inspect `trainData` / `testData` afterwards.
+   * @returns Nothing; inspect `trainingData` / `testData` afterwards.
    * @throws If any file is missing or unreadable, if a file is not valid gzip,
    * or if a magic number does not match the expected images/labels constant.
    */
@@ -108,7 +108,7 @@ export class MnistLoader {
     onProgress?.('Loading MNIST test labels...')
     const testLabels = await this.downloadAndParseLabels(MNIST_PATHS.testLabels)
 
-    this.trainData = { inputs: trainImages, labels: trainLabels }
+    this.trainingData = { inputs: trainImages, labels: trainLabels }
     this.testData = { inputs: testImages, labels: testLabels }
     this.loaded = true
 
@@ -242,18 +242,18 @@ export class MnistLoader {
    * Convenience wrapper over {@link MnistLoader.imageToText} that retrieves
    * the image from the loaded dataset by type and index.
    *
-   * @param type - 'trainData' for training images, 'testData' for test images
+   * @param type - 'trainingData' for training images, 'testData' for test images
    * @param index - Index of the image within the selected dataset (0-based)
    * @returns A string containing the 28×28 image rendered as text with newline-separated rows
    * @throws If data has not been loaded (call `load()` first) or index is out of bounds
    */
-  imageAsText(type: 'trainData' | 'testData', index: number): string {
-    assertIsNotNull(this.trainData)
+  imageAsText(type: 'trainingData' | 'testData', index: number): string {
+    assertIsNotNull(this.trainingData)
     assertIsNotNull(this.testData)
 
     return MnistLoader.imageToText(
-      type === 'trainData'
-        ? this.trainData.inputs[index]
+      type === 'trainingData'
+        ? this.trainingData.inputs[index]
         : this.testData.inputs[index],
     )
   }
