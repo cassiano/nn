@@ -1,3 +1,4 @@
+import { NumericVector } from './types.ts'
 /**
  * Activation functions and their derivatives for the neural network.
  *
@@ -107,8 +108,7 @@ export function tanhDerivative(x: number): number {
  * ratio but prevents `Math.exp` from overflowing. An empty input yields `[]`,
  * since the sum then reduces to 0 over no terms.
  */
-export function softmax(logits: number[]): number[] {
-
+export function softmax(logits: NumericVector): NumericVector {
   const max = Math.max(...logits)
   const exps = logits.map(v => Math.exp(v - max))
   const sum = exps.reduce((a, b) => a + b, 0)

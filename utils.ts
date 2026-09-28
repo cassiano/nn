@@ -294,7 +294,7 @@ export const initializeVector = (size: number, value = 0): NumericVector =>
  * yields `[]`.
  * @example toMatrix([1, 2, 3]) // => [[1], [2], [3]]
  */
-export const toMatrix = (vector: number[]): number[][] =>
+export const toMatrix = (vector: NumericVector): NumericMatrix =>
   vector.map(value => [value])
 
 /**
@@ -305,7 +305,7 @@ export const toMatrix = (vector: number[]): number[][] =>
  * longer than one entry have their extra columns dropped.
  * @example fromMatrix([[1], [2], [3]]) // => [1, 2, 3]
  */
-export const fromMatrix = (matrix: number[][]): number[] =>
+export const fromMatrix = (matrix: NumericMatrix): NumericVector =>
   matrix.map(row => row[0])
 
 /**

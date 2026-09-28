@@ -8,6 +8,7 @@ import {
   multiplyMatrixByScalar,
   addVectors,
   multiplyVectorByScalar,
+  initializeMatrix,
 } from './utils.ts'
 import {
   NumericVector,
@@ -16,7 +17,7 @@ import {
   Gradient,
 } from './types.ts'
 import { Layer } from './layer.ts'
-import { hadamardProduct } from './utils.ts'
+import { hadamardProduct, initializeVector } from './utils.ts'
 import { BATCH_SIZE } from './constants.ts'
 import {
   MNIST_OUTPUT_SIZE,
@@ -151,7 +152,7 @@ export class Network {
    * resulting {@link Network.y} becomes 1; the rest become 0.
    * @throws If `inputs.length` differs from the input layer's size.
    */
-  loadSample(inputs: number[], label: number) {
+  loadSample(inputs: NumericVector, label: number) {
     if (inputs.length !== this.inputLayer.size)
       throw new Error(
         `Expected input size of ${this.inputLayer.size} but got ${inputs.length}`,

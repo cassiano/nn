@@ -1,5 +1,6 @@
 import type { TrainingData } from './types.ts'
 import { map, timesForEachN, assertIsNotNull } from './utils.ts'
+import { NumericMatrix } from './types.ts'
 
 // MNIST Dataset
 
@@ -136,7 +137,7 @@ export class MnistLoader {
    * @throws If the file cannot be read, is not valid gzip, or its magic number
    * is not {@link MNIST_IMAGE_MAGIC}.
    */
-  private async downloadAndParseImages(path: string): Promise<number[][]> {
+  private async downloadAndParseImages(path: string): Promise<NumericMatrix> {
     const data = await Deno.readFile(path)
     const decompressed = await this.gunzip(data)
     const view = new DataView(decompressed.buffer) // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
