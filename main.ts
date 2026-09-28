@@ -63,9 +63,9 @@ const main = async () => {
   let hits
   let misses
 
-  for (let i = 0; i < EPOCHS; i++) {
+  for (let epoch = 0; epoch < EPOCHS; epoch++) {
     console.log('----------------')
-    console.log(`Starting epoch ${i + 1}`)
+    console.log(`Starting epoch ${epoch + 1}`)
     console.log('----------------')
 
     hits = 0
@@ -73,14 +73,16 @@ const main = async () => {
 
     shuffle(trainingDataIndexes)
 
-    for (let j = 0; j < totalBatches; j++) {
+    for (let batch = 0; batch < totalBatches; batch++) {
       console.clear()
-      console.log(`Processing batch ${j + 1}/${totalBatches} of epoch ${i + 1}`)
+      console.log(
+        `Processing batch ${batch + 1}/${totalBatches} of epoch ${epoch + 1}`,
+      )
 
       const batchGradients: Gradient[] = []
 
-      for (let k = 0; k < BATCH_SIZE; k++) {
-        const sampleIndex = trainingDataIndexes[j * BATCH_SIZE + k]
+      for (let i = 0; i < BATCH_SIZE; i++) {
+        const sampleIndex = trainingDataIndexes[batch * BATCH_SIZE + i]
 
         network.loadSample(inputs[sampleIndex], labels[sampleIndex])
         network.feedForward()
@@ -94,11 +96,11 @@ const main = async () => {
       }
 
       console.log({
-        i,
+        i: epoch,
         cost: network.cost,
         hits,
         misses,
-        epochAccuracy: `${formatWithDecimalPlaces(hits / ((j + 1) * BATCH_SIZE), 2)}%`,
+        epochAccuracy: `${formatWithDecimalPlaces(hits / ((batch + 1) * BATCH_SIZE), 2)}%`,
       })
 
       console.log('Updating network parameters')
@@ -106,8 +108,8 @@ const main = async () => {
       const averageGradient = network.calculateAverageGradient(batchGradients)
 
       avgCost =
-        ((i * totalBatches + j) * avgCost + network.cost) /
-        (i * totalBatches + (j + 1))
+        ((epoch * totalBatches + batch) * avgCost + network.cost) /
+        (epoch * totalBatches + (batch + 1))
 
       console.log({ avgCost })
 
