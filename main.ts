@@ -74,6 +74,7 @@ const main = async () => {
     shuffle(trainingDataIndexes)
 
     for (let j = 0; j < totalBatches; j++) {
+      console.clear()
       console.log(`Processing batch ${j + 1}/${totalBatches} of epoch ${i + 1}`)
 
       const batchGradients: Gradient[] = []
