@@ -19,7 +19,7 @@ export const NETWORK_LAYER_CONFIG: InitialLayerData[] = [
 ]
 
 // η = learning rate
-export const NETWORK_LEARNING_RATE = 0.001
+export const NETWORK_LEARNING_RATE = 0.006
 
 export const EPOCHS = 5
 export const BATCH_SIZE = 60
