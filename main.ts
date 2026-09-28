@@ -63,26 +63,23 @@ const main = async () => {
   let hits
   let misses
 
-  for (let epoch = 0; epoch < EPOCHS; epoch++) {
-    console.log('----------------')
-    console.log(`Starting epoch ${epoch + 1}`)
-    console.log('----------------')
-
+  for (let epochIdx = 0; epochIdx < EPOCHS; epochIdx++) {
     hits = 0
     misses = 0
 
     shuffle(trainingDataIndexes)
 
-    for (let batch = 0; batch < totalBatches; batch++) {
+    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
       console.clear()
       console.log(
-        `Processing batch ${batch + 1}/${totalBatches} of epoch ${epoch + 1}`,
+        `Processing batch ${batchIdx + 1}/${totalBatches} of epoch ${epochIdx + 1}`,
       )
 
       const batchGradients: Gradient[] = []
 
-      for (let i = 0; i < BATCH_SIZE; i++) {
-        const sampleIndex = trainingDataIndexes[batch * BATCH_SIZE + i]
+      for (let batchImageIdx = 0; batchImageIdx < BATCH_SIZE; batchImageIdx++) {
+        const sampleIndex =
+          trainingDataIndexes[batchIdx * BATCH_SIZE + batchImageIdx]
 
         network.loadSample(inputs[sampleIndex], labels[sampleIndex])
         network.feedForward()
@@ -95,23 +92,21 @@ const main = async () => {
         batchGradients.push(network.calculateGradient())
       }
 
+      avgCost =
+        ((epochIdx * totalBatches + batchIdx) * avgCost + network.cost) /
+        (epochIdx * totalBatches + (batchIdx + 1))
+
       console.log({
-        i: epoch,
+        epoch: epochIdx + 1,
+        batch: batchIdx + 1,
         cost: network.cost,
         hits,
         misses,
-        epochAccuracy: `${formatWithDecimalPlaces(hits / ((batch + 1) * BATCH_SIZE), 2)}%`,
+        avgCost,
+        epochAccuracy: `${formatWithDecimalPlaces(hits / ((batchIdx + 1) * BATCH_SIZE), 2)}%`,
       })
 
-      console.log('Updating network parameters')
-
       const averageGradient = network.calculateAverageGradient(batchGradients)
-
-      avgCost =
-        ((epoch * totalBatches + batch) * avgCost + network.cost) /
-        (epoch * totalBatches + (batch + 1))
-
-      console.log({ avgCost })
 
       network.backPropagate(averageGradient)
     }
