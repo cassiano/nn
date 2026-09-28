@@ -150,6 +150,8 @@ const main = async () => {
   console.log('--------------')
 
   console.log({
+    epochs: EPOCHS,
+    η: network.η,
     cost: network.cost,
     hits,
     misses,
