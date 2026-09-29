@@ -36,8 +36,7 @@ let loader: MnistLoader
  * batches are trained, so `inputs.length % BATCH_SIZE` trailing samples are
  * dropped each epoch.
  *
- * While training, each batch is predicted on the fly and reported in place
- * (the console is cleared first, so only the current batch is visible): the
+ * While training, each batch is predicted on the fly and reported in place: the
  * cost of its last sample, a running average of the cost over every batch so
  * far, the running hit/miss counts and the accuracy so far in this epoch.
  * Those numbers describe the weights as they were *before* the batch's update,
@@ -77,9 +76,8 @@ const main = async () => {
     shuffle(trainingDataIndexes)
 
     timesForEach(totalBatches, batchIdx => {
-      console.clear()
       console.log(
-        `Processing batch ${batchIdx + 1}/${totalBatches} of epoch ${epochIdx + 1}`,
+        `\nProcessing batch ${batchIdx + 1}/${totalBatches} of epoch ${epochIdx + 1}`,
       )
 
       const batchGradients: Gradient[] = []
@@ -103,6 +101,10 @@ const main = async () => {
         ((epochIdx * totalBatches + batchIdx) * avgCost + network.cost) /
         (epochIdx * totalBatches + (batchIdx + 1))
 
+      const averageGradient = network.calculateAverageGradient(batchGradients)
+
+      network.backPropagate(averageGradient)
+
       console.log({
         epoch: epochIdx + 1,
         batch: batchIdx + 1,
@@ -112,10 +114,6 @@ const main = async () => {
         avgCost,
         epochAccuracy: `${formatPercentageWithDecimalPlaces(hits / ((batchIdx + 1) * BATCH_SIZE), 2)}%`,
       })
-
-      const averageGradient = network.calculateAverageGradient(batchGradients)
-
-      network.backPropagate(averageGradient)
     })
   })
 
