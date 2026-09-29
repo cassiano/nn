@@ -331,6 +331,7 @@ export class Network {
         layer.w,
         multiplyMatrixByScalar(w, -this.η * BATCH_SIZE),
       )
+
       layer.b = addVectors(
         layer.b,
         multiplyVectorByScalar(b, -this.η * BATCH_SIZE),
