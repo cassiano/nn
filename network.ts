@@ -284,6 +284,19 @@ export class Network {
         b: [...currentLayer.δ],
       }
 
+      // Alternative:
+      //
+      // const gradientlayer: GradientLayer = {
+      //   𝓁,
+      //   w: transposeMatrix(
+      //     multiplyMatrices(
+      //       toMatrix(previousLayer.a),
+      //       transposeMatrix(toMatrix(currentLayer.δ)),
+      //     ),
+      //   ),
+      //   b: [...currentLayer.δ],
+      // }
+
       gradient.push(gradientlayer)
     }
 
