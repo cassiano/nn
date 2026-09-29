@@ -48,14 +48,14 @@ export type InitialLayerData = {
  * same row/column order as the layer's own weight matrix
  * @property b - ∂C/∂b(𝓁), a [size] vector aligned with the layer's biases
  */
-export type LayerGradient = {
+export type GradientLayer = {
   𝓁: number // [1..𝐋]
   w: NumericMatrix
   b: NumericVector
 }
 
 /**
- * Every trainable layer's {@link LayerGradient}, ordered from the output layer
+ * Every trainable layer's {@link GradientLayer}, ordered from the output layer
  * (𝓁 = 𝐋) backwards to the first hidden layer (𝓁 = 1), matching the order in
  * which {@link Network.calculateGradient} walks the layers.
  *
@@ -64,4 +64,4 @@ export type LayerGradient = {
  * parameters. {@link Network.calculateAverageGradient} relies on that fixed
  * length and order when it pairs up a batch.
  */
-export type Gradient = LayerGradient[]
+export type Gradient = GradientLayer[]

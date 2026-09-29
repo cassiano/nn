@@ -13,15 +13,11 @@ import {
 import {
   NumericVector,
   InitialLayerData,
-  LayerGradient,
+  GradientLayer,
   Gradient,
 } from './types.ts'
 import { Layer } from './layer.ts'
-import {
-  hadamardProduct,
-  initializeVector,
-  divideMatrixByScalar,
-} from './utils.ts'
+import { hadamardProduct, createVector, divideMatrixByScalar } from './utils.ts'
 import { BATCH_SIZE } from './constants.ts'
 import { divideVectorByScalar, timesForEach } from './utils.ts'
 import {
@@ -230,7 +226,7 @@ export class Network {
    * Requires {@link Network.y} and a prior {@link Network.feedForward}, since
    * δ is derived from the sample's activations and pre-activations.
    *
-   * @returns A {@link Gradient}: one {@link LayerGradient} per trainable layer,
+   * @returns A {@link Gradient}: one {@link GradientLayer} per trainable layer,
    * ordered output layer (𝓁 = 𝐋) first, then each inner layer descending to 1.
    * Each `w` is shaped [size][previous layer size] and each `b` is [size], so
    * they can be applied straight onto the matching parameters. Note each `b` is
@@ -267,7 +263,7 @@ export class Network {
         σDerivatives,
       )
 
-      const layerGradient: LayerGradient = {
+      const gradientlayer: GradientLayer = {
         𝓁,
         // [/doc_img/network.ts/2026-09-26-18-21-20.png]
         w: multiplyMatrices(
@@ -278,7 +274,7 @@ export class Network {
         b: [...currentLayer.δ],
       }
 
-      gradient.push(layerGradient)
+      gradient.push(gradientlayer)
     }
 
     return gradient
@@ -337,7 +333,7 @@ export class Network {
    * Layers are paired up **by array position**: entry `i` of every sample is
    * averaged together. As a guard against a batch whose samples disagree, each
    * sample's entry at position `i` must carry the same
-   * {@link LayerGradient.𝓁} as the first sample's, and the result inherits
+   * {@link GradientLayer.𝓁} as the first sample's, and the result inherits
    * that `𝓁` and the first sample's order. The order therefore has to agree
    * across the batch, but it need not ascend by `𝓁`: whatever
    * {@link Network.calculateGradient} produced works, output layer first.
@@ -349,7 +345,7 @@ export class Network {
    *
    * @param gradients One {@link Gradient} per sample, each covering the same
    * trainable layers in the same order.
-   * @returns The mean {@link Gradient}, one {@link LayerGradient} per trainable
+   * @returns The mean {@link Gradient}, one {@link GradientLayer} per trainable
    * layer in the first sample's order, whose `w` and `b` have the first
    * sample's shapes.
    * @throws If `gradients` is empty, if two samples disagree about the `𝓁` at
@@ -365,7 +361,7 @@ export class Network {
     const size = gradients.length
     const averageGradient: Gradient = []
 
-    // Calculate the w and b averages per layer, pairing entry i of every
+    // Calculate the w and b averages per layer, pairing entry layerIdx of every
     // sample (the first sample supplies the 𝓁 labels and the entry order).
     timesForEach(this.𝐋, layerIdx => {
       const { w, b, 𝓁 } = firstGradient[layerIdx]
@@ -384,7 +380,7 @@ export class Network {
         summedB = addVectors(summedB, layer.b)
       }
 
-      const averageLayerGradient: LayerGradient = {
+      const averageLayerGradient: GradientLayer = {
         𝓁,
         w: divideMatrixByScalar(summedW, size),
         b: divideVectorByScalar(summedB, size),
