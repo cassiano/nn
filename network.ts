@@ -367,21 +367,21 @@ export class Network {
 
     // Calculate the w and b averages per layer, pairing entry i of every
     // sample (the first sample supplies the 𝓁 labels and the entry order).
-    timesForEach(this.𝐋, i => {
-      const { w, b, 𝓁 } = firstGradient[i]
+    timesForEach(this.𝐋, layerIdx => {
+      const { w, b, 𝓁 } = firstGradient[layerIdx]
 
       // Initialize both sums with 0-filled matrixes/vectors.
       let summedW = createMatrix(w.length, w[0].length, 0)
       let summedB = createVector(b.length, 0)
 
       for (const gradient of gradients) {
-        if (gradient[i].𝓁 !== 𝓁)
-          throw new Error(
-            `Mixing distinct 𝓁 values (${gradient[i].𝓁} and ${𝓁})`,
-          )
+        const layer = gradient[layerIdx]
 
-        summedW = addMatrices(summedW, gradient[i].w)
-        summedB = addVectors(summedB, gradient[i].b)
+        if (layer.𝓁 !== 𝓁)
+          throw new Error(`Mixing distinct 𝓁 values (${layer.𝓁} and ${𝓁})`)
+
+        summedW = addMatrices(summedW, layer.w)
+        summedB = addVectors(summedB, layer.b)
       }
 
       const averageLayerGradient: LayerGradient = {
