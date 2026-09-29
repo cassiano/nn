@@ -257,21 +257,19 @@ export class Network {
       const σDerivatives: NumericVector = currentLayer.z.map(
         currentLayer.σDerivativeFn,
       )
+      const dCostDActivation: NumericVector = currentLayer.isOutputLayer
+        ? currentLayer.a.map(
+            (activationValue, i) => 2 * (activationValue - this.y[i]),
+          )
+        : fromMatrix(
+            multiplyMatrices(
+              transposeMatrix(nextLayer!.w),
+              toMatrix(nextLayer!.δ),
+            ),
+          )
 
       // [/doc_img/network.ts/2026-09-26-18-25-14.png]
-      currentLayer.δ = hadamardProduct(
-        currentLayer.isOutputLayer
-          ? currentLayer.a.map(
-              (activationValue, i) => 2 * (activationValue - this.y[i]),
-            )
-          : fromMatrix(
-              multiplyMatrices(
-                transposeMatrix(nextLayer!.w),
-                toMatrix(nextLayer!.δ),
-              ),
-            ),
-        σDerivatives,
-      )
+      currentLayer.δ = hadamardProduct(dCostDActivation, σDerivatives)
 
       const gradientlayer: GradientLayer = {
         𝓁,
