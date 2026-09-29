@@ -8,7 +8,7 @@ import {
   multiplyMatrixByScalar,
   addVectors,
   multiplyVectorByScalar,
-  initializeMatrix,
+  createMatrix,
 } from './utils.ts'
 import {
   NumericVector,
@@ -371,8 +371,8 @@ export class Network {
       const { w, b, 𝓁 } = firstGradient[i]
 
       // Initialize both sums with 0-filled matrixes/vectors.
-      let summedW = initializeMatrix(w.length, w[0].length, 0)
-      let summedB = initializeVector(b.length, 0)
+      let summedW = createMatrix(w.length, w[0].length, 0)
+      let summedB = createVector(b.length, 0)
 
       for (const gradient of gradients) {
         if (gradient[i].𝓁 !== 𝓁)

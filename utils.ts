@@ -276,14 +276,28 @@ export function assertIsNotUndefinedOrNull<T>(
     )
 }
 
-export const initializeMatrix = (
+export const createMatrix = (
   rows: number,
   cols: number,
-  value = 0,
-): NumericMatrix => timesMapN([rows, cols], () => value)
+  initialValueOrFn: number | (() => number),
+): NumericMatrix =>
+  timesMapN(
+    [rows, cols],
+    typeof initialValueOrFn === 'function'
+      ? initialValueOrFn
+      : () => initialValueOrFn,
+  )
 
-export const initializeVector = (size: number, value = 0): NumericVector =>
-  timesMap(size, () => value)
+export const createVector = (
+  size: number,
+  initialValueOrFn: number | (() => number),
+): NumericVector =>
+  timesMap(
+    size,
+    typeof initialValueOrFn === 'function'
+      ? initialValueOrFn
+      : () => initialValueOrFn,
+  )
 
 /**
  * Converts an Nx1 column vector (a list of numbers) into an Nx1 matrix, so it

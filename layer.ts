@@ -1,13 +1,13 @@
 import { NumericVector, NumericMatrix } from './types.ts'
 import { Network } from './network.ts'
+import { createVector } from './utils.ts'
 import {
   random,
-  timesMap,
-  timesMapN,
   fromMatrix,
   addMatrices,
   multiplyMatrices,
   toMatrix,
+  createMatrix,
 } from './utils.ts'
 import {
   sigmoidDerivative,
@@ -211,10 +211,10 @@ export class Layer {
    * derived from its size.
    */
   private initializeNetworkParameters() {
-    this.w = timesMapN([this.size, this.previousLayer.size], () =>
+    this.w = createMatrix(this.size, this.previousLayer.size, () =>
       random(-1, 1),
     )
-    this.b = timesMap(this.size, () => random(-1, 1))
+    this.b = createVector(this.size, () => random(-1, 1))
   }
 
   /**
