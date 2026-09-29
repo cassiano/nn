@@ -41,7 +41,7 @@ memory; `--allow-read` grants access to the `./data` directory.
 ### Running the tests
 
 ```sh
-deno test --allow-read   # 105 tests across the whole suite
+deno test --allow-read   # 160 tests across the whole suite
 deno lint               # type-lint the source and the tests
 ```
 
@@ -61,7 +61,7 @@ network harnesses).
 ├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, Gradient, …)
 ├── utils.ts          # Loop helpers, matrix ops, random, shuffle, assertions
 ├── constants.ts      # Hyperparameters and the network topology
-├── tests/            # Automated test suite (105 tests) + shared test helpers
+├── tests/            # Automated test suite (160 tests) + shared test helpers
 ├── doc_img/          # Screenshots/diagrams referenced from the source comments
 ├── tsconfig.json     # TS configuration (bundler-style, strict)
 └── data/mnist/       # The four zipped MNIST data files
@@ -172,7 +172,8 @@ Tiny functional helpers used throughout:
 - `multiplyMatrixByScalar` / `multiplyVectorByScalar` and their
   `divide…ByScalar` counterparts — scaling a gradient, by the learning rate or
   by the batch size (the divide variants throw on a 0 divisor)
-- `formatWithDecimalPlaces` — renders a number to fixed precision for the logs
+- `formatPercentageWithDecimalPlaces` — renders a ratio as a percentage rounded
+  to a fixed precision, for the logs
 - `assertIsNotUndefined` / `assertIsNotNull` / `assertIsNotUndefinedOrNull` —
   type-guard assertions that narrow types at runtime
 

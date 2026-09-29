@@ -283,7 +283,8 @@ export function assertIsNotUndefinedOrNull<T>(
  * into the caller's data.
  *
  * @param rows Number of rows; values below 1 produce `[]`.
- * @param cols Number of columns per row.
+ * @param cols Number of columns per row; 0 produces one empty row per requested
+ * row (`[[], []]` for `(2, 0)`), since the row count is filled in first.
  * @param initialValueOrFn Either the value to repeat in every cell, or a
  * function called once per cell (e.g. `() => random(-1, 1)`).
  * @returns A new matrix of the given shape. A function is invoked in row-major
@@ -594,16 +595,16 @@ export const shuffle = (array: number[]): void => {
 }
 
 /**
- * Rounds a number to a fixed number of decimal places and returns it as a
- * string, so percentages and rates read the same in every log line regardless
- * of how many digits they happen to need (a bare `0.5` vs `0.55555`).
+ * Rounds a ratio to a fixed number of decimal places, scaled by 100, so
+ * accuracies and rates read the same in every log line (a bare `0.5` vs
+ * `0.55555`).
  *
- * @param value The number to format; NaN and Infinity are returned as-is
- * because {@link Math.round} yields NaN for them.
- * @param decimalPlaces How many digits to keep after the decimal point.
- * Negative values round tens, hundreds, etc. instead.
- * @returns The rounded value as a string, e.g. `'98.57'`.
- * @example formatWithDecimalPlaces(0.985678, 2) // => '98.57'
+ * @param value The ratio to format; a non-finite value propagates as NaN,
+ * because {@link Math.round} yields NaN for it.
+ * @param decimalPlaces How many digits to keep after the decimal point. Negative
+ * values round to the next power of ten (0 or 100 percent).
+ * @returns The rounded percentage as a number.
+ * @example formatPercentageWithDecimalPlaces(0.985678, 2) // => 98.57
  */
 export const formatPercentageWithDecimalPlaces = (
   value: number,
