@@ -297,7 +297,8 @@ export class Network {
       //   b: [...currentLayer.δ],
       // }
       //
-      // Proof that the order doesn't matter:
+      // Proof that the multiplication can be done in any order, as long as their shapes properly align:
+      // (see corresponding test in `tests/utils_test.ts`)
       //
       // const a = [2, 3, 4]
       // const b = [10, 20, 30, 40]

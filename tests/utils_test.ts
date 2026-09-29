@@ -98,24 +98,48 @@ Deno.test('timesForEach / zero iterations for a zero count', () => {
 })
 
 Deno.test('timesMap / builds an array from the callback results', () => {
-  assertEquals(timesMap(3, i => i * 2), [0, 2, 4])
-  assertEquals(timesMap(0, () => 1), [])
-  assertEquals(timesMap(3, () => 'x'), ['x', 'x', 'x'])
+  assertEquals(
+    timesMap(3, i => i * 2),
+    [0, 2, 4],
+  )
+  assertEquals(
+    timesMap(0, () => 1),
+    [],
+  )
+  assertEquals(
+    timesMap(3, () => 'x'),
+    ['x', 'x', 'x'],
+  )
 })
 
 Deno.test('timesReduce / accumulates from the provided initial value', () => {
-  assertEquals(timesReduce(5, (acc, i) => acc + i, 100), 110) // 100 + 0 + 1 + 2 + 3 + 4
+  assertEquals(
+    timesReduce(5, (acc, i) => acc + i, 100),
+    110,
+  ) // 100 + 0 + 1 + 2 + 3 + 4
 })
 
-Deno.test('timesReduce / without initial value seeds the accumulator with 0', () => {
-  // Implementation detail: starts at index 1 with an accumulator of 0,
-  // so count 5 sums {1, 2, 3, 4} = 10.
-  assertEquals(timesReduce<number>(5, (acc, i) => acc + i), 10)
-})
+Deno.test(
+  'timesReduce / without initial value seeds the accumulator with 0',
+  () => {
+    // Implementation detail: starts at index 1 with an accumulator of 0,
+    // so count 5 sums {1, 2, 3, 4} = 10.
+    assertEquals(
+      timesReduce<number>(5, (acc, i) => acc + i),
+      10,
+    )
+  },
+)
 
 Deno.test('timesReduce / a zero count returns the initial accumulator', () => {
-  assertEquals(timesReduce(0, (acc, i) => acc + i, 100), 100)
-  assertEquals(timesReduce<number>(0, (acc, i) => acc + i), 0)
+  assertEquals(
+    timesReduce(0, (acc, i) => acc + i, 100),
+    100,
+  )
+  assertEquals(
+    timesReduce<number>(0, (acc, i) => acc + i),
+    0,
+  )
 })
 
 Deno.test('timesReduce / count 1 without an initial never calls fn', () => {
@@ -128,11 +152,14 @@ Deno.test('timesReduce / count 1 without an initial never calls fn', () => {
   assertEquals(calls, 0)
 })
 
-Deno.test('reversedForEach / visits items from last to first with indices', () => {
-  const seen: (string | number)[] = []
-  reversedForEach(['a', 'b', 'c'], (item, index) => seen.push(index, item))
-  assertEquals(seen, [2, 'c', 1, 'b', 0, 'a'])
-})
+Deno.test(
+  'reversedForEach / visits items from last to first with indices',
+  () => {
+    const seen: (string | number)[] = []
+    reversedForEach(['a', 'b', 'c'], (item, index) => seen.push(index, item))
+    assertEquals(seen, [2, 'c', 1, 'b', 0, 'a'])
+  },
+)
 
 Deno.test('reversedForEach / an empty collection never calls fn', () => {
   let calls = 0
@@ -162,9 +189,15 @@ Deno.test('timesMapN / supports three dimensions', () => {
   ])
 })
 
-Deno.test('timesMapN / empty dimensions produce an empty array at runtime', () => {
-  assertEquals(timesMapN([] as [], () => 0), [])
-})
+Deno.test(
+  'timesMapN / empty dimensions produce an empty array at runtime',
+  () => {
+    assertEquals(
+      timesMapN([] as [], () => 0),
+      [],
+    )
+  },
+)
 
 Deno.test('timesForEachN / visits every combination exactly once', () => {
   const visits: number[] = []
@@ -201,7 +234,10 @@ Deno.test('assertIsNotUndefinedOrNull / rejects both empty values', () => {
     () => assertIsNotUndefinedOrNull(undefined),
     'not to be undefined or null',
   )
-  assertThrows(() => assertIsNotUndefinedOrNull(null), 'not to be undefined or null')
+  assertThrows(
+    () => assertIsNotUndefinedOrNull(null),
+    'not to be undefined or null',
+  )
   assertIsNotUndefinedOrNull(3)
 })
 
@@ -223,7 +259,22 @@ Deno.test('fromMatrix / an empty matrix yields an empty vector', () => {
 })
 
 Deno.test('addMatrices / sums element-wise', () => {
-  assertEquals(addMatrices([[1, 2], [3, 4]], [[5, 6], [7, 8]]), [[6, 8], [10, 12]])
+  assertEquals(
+    addMatrices(
+      [
+        [1, 2],
+        [3, 4],
+      ],
+      [
+        [5, 6],
+        [7, 8],
+      ],
+    ),
+    [
+      [6, 8],
+      [10, 12],
+    ],
+  )
 })
 
 Deno.test('addMatrices / throws on dimension mismatch', () => {
@@ -254,13 +305,38 @@ Deno.test('addMatrices / handles negative values', () => {
 })
 
 Deno.test('multiplyMatrices / computes the standard matrix product', () => {
-  assertEquals(multiplyMatrices([[1, 2], [3, 4]], [[5, 6], [7, 8]]), [[19, 22], [43, 50]])
+  assertEquals(
+    multiplyMatrices(
+      [
+        [1, 2],
+        [3, 4],
+      ],
+      [
+        [5, 6],
+        [7, 8],
+      ],
+    ),
+    [
+      [19, 22],
+      [43, 50],
+    ],
+  )
 })
 
 Deno.test('multiplyMatrices / supports rectangular matrices', () => {
-  const left = [[1, 2, 3], [4, 5, 6]]
-  const right = [[7, 8], [9, 10], [11, 12]]
-  assertEquals(multiplyMatrices(left, right), [[58, 64], [139, 154]])
+  const left = [
+    [1, 2, 3],
+    [4, 5, 6],
+  ]
+  const right = [
+    [7, 8],
+    [9, 10],
+    [11, 12],
+  ]
+  assertEquals(multiplyMatrices(left, right), [
+    [58, 64],
+    [139, 154],
+  ])
 })
 
 Deno.test('multiplyMatrices / 1x1 matrices multiply like scalars', () => {
@@ -268,11 +344,30 @@ Deno.test('multiplyMatrices / 1x1 matrices multiply like scalars', () => {
 })
 
 Deno.test('multiplyMatrices / the identity changes nothing', () => {
-  const left = [[1, 2, 3], [4, 5, 6]]
+  const left = [
+    [1, 2, 3],
+    [4, 5, 6],
+  ]
   // Left: a 3x3 identity on the right, 2x3 == 2x3. Right: a 2x2 identity on
   // the left, 2 == 2 rows. Both must reproduce `left`.
-  assertEquals(multiplyMatrices(left, [[1, 0, 0], [0, 1, 0], [0, 0, 1]]), left)
-  assertEquals(multiplyMatrices([[1, 0], [0, 1]], left), left)
+  assertEquals(
+    multiplyMatrices(left, [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ]),
+    left,
+  )
+  assertEquals(
+    multiplyMatrices(
+      [
+        [1, 0],
+        [0, 1],
+      ],
+      left,
+    ),
+    left,
+  )
 })
 
 Deno.test('multiplyMatrices / handles negative values', () => {
@@ -283,18 +378,68 @@ Deno.test('multiplyMatrices / throws when inner dimensions differ', () => {
   assertThrows(() => multiplyMatrices([[1, 2]], [[1, 2]]), 'must match')
 })
 
+Deno.test(
+  'multiplyMatrices / multiplying 2 vectors (as matrixes) can be done in any order, as long as their shapes properly align',
+  () => {
+    const vectorA = [2, 3, 4]
+    const vectorB = [10, 20, 30, 40]
+
+    assertEquals(
+      multiplyMatrices(toMatrix(vectorA), transposeMatrix(toMatrix(vectorB))),
+      [
+        [20, 40, 60, 80],
+        [30, 60, 90, 120],
+        [40, 80, 120, 160],
+      ],
+    )
+    assertEquals(
+      transposeMatrix(
+        multiplyMatrices(toMatrix(vectorB), transposeMatrix(toMatrix(vectorA))),
+      ),
+      [
+        [20, 40, 60, 80],
+        [30, 60, 90, 120],
+        [40, 80, 120, 160],
+      ],
+    )
+  },
+)
+
 Deno.test('transposeMatrix / swaps rows and columns', () => {
-  assertEquals(transposeMatrix([[1, 2], [3, 4]]), [[1, 3], [2, 4]])
+  assertEquals(
+    transposeMatrix([
+      [1, 2],
+      [3, 4],
+    ]),
+    [
+      [1, 3],
+      [2, 4],
+    ],
+  )
 })
 
 Deno.test('transposeMatrix / handles rectangular matrices', () => {
   assertEquals(
-    transposeMatrix([[1, 2, 3], [4, 5, 6]]),
-    [[1, 4], [2, 5], [3, 6]],
+    transposeMatrix([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]),
+    [
+      [1, 4],
+      [2, 5],
+      [3, 6],
+    ],
   )
   assertEquals(
-    transposeMatrix([[1, 4], [2, 5], [3, 6]]),
-    [[1, 2, 3], [4, 5, 6]],
+    transposeMatrix([
+      [1, 4],
+      [2, 5],
+      [3, 6],
+    ]),
+    [
+      [1, 2, 3],
+      [4, 5, 6],
+    ],
   )
 })
 
@@ -303,18 +448,27 @@ Deno.test('transposeMatrix / 1x1 matrices are unchanged', () => {
 })
 
 Deno.test('transposeMatrix / is its own inverse', () => {
-  const original = [[1, 2, 3], [4, 5, 6]]
+  const original = [
+    [1, 2, 3],
+    [4, 5, 6],
+  ]
   assertEquals(transposeMatrix(transposeMatrix(original)), original)
 })
 
 Deno.test('transposeMatrix / swaps the shape of the result', () => {
-  const transposed = transposeMatrix([[1, 2, 3], [4, 5, 6]])
+  const transposed = transposeMatrix([
+    [1, 2, 3],
+    [4, 5, 6],
+  ])
   assertEquals(transposed.length, 3)
   assertEquals(transposed[0].length, 2)
 })
 
 Deno.test('transposeMatrix / preserves every element exactly once', () => {
-  const original = [[1, 2, 3], [4, 5, 6]]
+  const original = [
+    [1, 2, 3],
+    [4, 5, 6],
+  ]
   // Transposing reorders elements, so compare as a sorted multiset.
   const flattenSorted = (m: number[][]) => m.flat().sort((a, b) => a - b)
   assertEquals(
@@ -368,25 +522,31 @@ Deno.test('random / respects a custom range', () => {
   }
 })
 
-Deno.test('shuffle / permutes deterministically under controlled randomness', () => {
-  const original = Math.random
-  Math.random = () => 0
-  try {
-    const array = [1, 2, 3]
-    shuffle(array)
-    // Fisher-Yates with Math.random() === 0 always swaps i with 0:
-    // [1,2,3] -> swap(2,0) -> [3,2,1] -> swap(1,0) -> [2,3,1]
-    assertEquals(array, [2, 3, 1])
-  } finally {
-    Math.random = original
-  }
-})
+Deno.test(
+  'shuffle / permutes deterministically under controlled randomness',
+  () => {
+    const original = Math.random
+    Math.random = () => 0
+    try {
+      const array = [1, 2, 3]
+      shuffle(array)
+      // Fisher-Yates with Math.random() === 0 always swaps i with 0:
+      // [1,2,3] -> swap(2,0) -> [3,2,1] -> swap(1,0) -> [2,3,1]
+      assertEquals(array, [2, 3, 1])
+    } finally {
+      Math.random = original
+    }
+  },
+)
 
 Deno.test('shuffle / preserves the multiset of elements', () => {
   const original = [1, 2, 3, 4, 5, 6, 7, 8]
   const copy = [...original]
   shuffle(copy)
-  assertEquals([...copy].sort((a, b) => a - b), original)
+  assertEquals(
+    [...copy].sort((a, b) => a - b),
+    original,
+  )
 })
 
 Deno.test('shuffle / leaves arrays of zero or one element untouched', () => {
@@ -453,18 +613,30 @@ Deno.test('createVector / size 0 produces an empty vector', () => {
   assertEquals(createVector(0, 1), [])
 })
 
-Deno.test('createVector / matches the size of a same-shaped createMatrix column', () => {
-  const vector = createVector(3, 0)
-  const column = createMatrix(3, 1, 0).map(([value]) => value)
+Deno.test(
+  'createVector / matches the size of a same-shaped createMatrix column',
+  () => {
+    const vector = createVector(3, 0)
+    const column = createMatrix(3, 1, 0).map(([value]) => value)
 
-  assertEquals(vector, column)
-})
+    assertEquals(vector, column)
+  },
+)
 
 Deno.test('multiplyMatrixByScalar / scales every entry', () => {
-  assertEquals(multiplyMatrixByScalar([[1, 2], [3, 4]], 2), [
-    [2, 4],
-    [6, 8],
-  ])
+  assertEquals(
+    multiplyMatrixByScalar(
+      [
+        [1, 2],
+        [3, 4],
+      ],
+      2,
+    ),
+    [
+      [2, 4],
+      [6, 8],
+    ],
+  )
   assertEquals(multiplyMatrixByScalar([[1.5, -2]], 0.5), [[0.75, -1]])
 })
 
@@ -489,7 +661,13 @@ Deno.test('multiplyVectorByScalar / an empty vector stays empty', () => {
 
 Deno.test('divideMatrixByScalar / divides every entry', () => {
   assertArrayClose(
-    divideMatrixByScalar([[2, 4], [6, 8]], 2).flat(),
+    divideMatrixByScalar(
+      [
+        [2, 4],
+        [6, 8],
+      ],
+      2,
+    ).flat(),
     [1, 2, 3, 4],
   )
   assertArrayClose(divideMatrixByScalar([[1]], 4).flat(), [0.25])
@@ -501,13 +679,19 @@ Deno.test('divideMatrixByScalar / undoes multiplyMatrixByScalar', () => {
     [0.3, 0.4],
   ]
 
-  assertEquals(divideMatrixByScalar(multiplyMatrixByScalar(matrix, 7), 7), matrix)
+  assertEquals(
+    divideMatrixByScalar(multiplyMatrixByScalar(matrix, 7), 7),
+    matrix,
+  )
 })
 
 Deno.test('divideMatrixByScalar / throws on a zero divisor', () => {
   // Rejected up front: a silent divide would fill the whole gradient with
   // Infinity/NaN and the weights with them on the next step.
-  assertThrows(() => divideMatrixByScalar([[1]], 0), 'Cannot divide matrix by 0')
+  assertThrows(
+    () => divideMatrixByScalar([[1]], 0),
+    'Cannot divide matrix by 0',
+  )
 })
 
 Deno.test('divideMatrixByScalar / an empty matrix stays empty', () => {
@@ -530,10 +714,7 @@ Deno.test('divideVectorByScalar / undoes multiplyVectorByScalar', () => {
 })
 
 Deno.test('divideVectorByScalar / throws on a zero divisor', () => {
-  assertThrows(
-    () => divideVectorByScalar([1], 0),
-    'Cannot divide vector by 0',
-  )
+  assertThrows(() => divideVectorByScalar([1], 0), 'Cannot divide vector by 0')
 })
 
 Deno.test('divideVectorByScalar / an empty vector stays empty', () => {
@@ -566,68 +747,108 @@ Deno.test('addVectors / does not mutate its operands', () => {
   assertEquals(right, [3, 4])
 })
 
-Deno.test('formatPercentageWithDecimalPlaces / rounds to the requested precision', () => {
-  // The value is a ratio, so the output is a percentage with the requested
-  // number of decimal places.
-  assertClose(formatPercentageWithDecimalPlaces(0.985678, 2), 98.57, 1e-9)
-  assertClose(formatPercentageWithDecimalPlaces(0.5, 2), 50, 1e-9)
-  assertClose(formatPercentageWithDecimalPlaces(1, 2), 100, 1e-9)
-})
+Deno.test(
+  'formatPercentageWithDecimalPlaces / rounds to the requested precision',
+  () => {
+    // The value is a ratio, so the output is a percentage with the requested
+    // number of decimal places.
+    assertClose(formatPercentageWithDecimalPlaces(0.985678, 2), 98.57, 1e-9)
+    assertClose(formatPercentageWithDecimalPlaces(0.5, 2), 50, 1e-9)
+    assertClose(formatPercentageWithDecimalPlaces(1, 2), 100, 1e-9)
+  },
+)
 
-Deno.test('formatPercentageWithDecimalPlaces / zero decimal places rounds to whole percent', () => {
-  assertClose(formatPercentageWithDecimalPlaces(0.985678, 0), 99, 1e-9)
-})
+Deno.test(
+  'formatPercentageWithDecimalPlaces / zero decimal places rounds to whole percent',
+  () => {
+    assertClose(formatPercentageWithDecimalPlaces(0.985678, 0), 99, 1e-9)
+  },
+)
 
-Deno.test('formatPercentageWithDecimalPlaces / leaves an already exact value alone', () => {
-  assertClose(formatPercentageWithDecimalPlaces(0.5, 2), 50, 1e-9)
-  assertClose(formatPercentageWithDecimalPlaces(0, 2), 0, 1e-9)
-})
+Deno.test(
+  'formatPercentageWithDecimalPlaces / leaves an already exact value alone',
+  () => {
+    assertClose(formatPercentageWithDecimalPlaces(0.5, 2), 50, 1e-9)
+    assertClose(formatPercentageWithDecimalPlaces(0, 2), 0, 1e-9)
+  },
+)
 
-Deno.test('formatPercentageWithDecimalPlaces / rounds the halfway case up', () => {
-  // Math.round is the rounding rule: 0.125 -> 12.5 -> 13.
-  assertClose(formatPercentageWithDecimalPlaces(0.125, 1), 12.5, 1e-9)
-  assertClose(formatPercentageWithDecimalPlaces(0.126, 1), 12.6, 1e-9)
-  assertClose(formatPercentageWithDecimalPlaces(0.124, 1), 12.4, 1e-9)
-})
+Deno.test(
+  'formatPercentageWithDecimalPlaces / rounds the halfway case up',
+  () => {
+    // Math.round is the rounding rule: 0.125 -> 12.5 -> 13.
+    assertClose(formatPercentageWithDecimalPlaces(0.125, 1), 12.5, 1e-9)
+    assertClose(formatPercentageWithDecimalPlaces(0.126, 1), 12.6, 1e-9)
+    assertClose(formatPercentageWithDecimalPlaces(0.124, 1), 12.4, 1e-9)
+  },
+)
 
-Deno.test('gradientAsVector / orders layers by 𝓁 and flattens weights then biases', () => {
-  // The layout: one contiguous block per layer, ascending 𝓁, each block being
-  // the layer's weights in row-major order followed by its biases.
-  const gradient: Gradient = [
-    { 𝓁: 2, w: [[4], [5]], b: [6] },
-    { 𝓁: 1, w: [[1, 2]], b: [3] },
-  ]
+Deno.test(
+  'gradientAsVector / orders layers by 𝓁 and flattens weights then biases',
+  () => {
+    // The layout: one contiguous block per layer, ascending 𝓁, each block being
+    // the layer's weights in row-major order followed by its biases.
+    const gradient: Gradient = [
+      { 𝓁: 2, w: [[4], [5]], b: [6] },
+      { 𝓁: 1, w: [[1, 2]], b: [3] },
+    ]
 
-  assertEquals(gradientAsVector(gradient), [1, 2, 3, 4, 5, 6])
-})
+    assertEquals(gradientAsVector(gradient), [1, 2, 3, 4, 5, 6])
+  },
+)
 
-Deno.test('gradientAsVector / does not depend on the order the layers arrive in', () => {
-  // The sort exists for this: the same gradient expressed in any order has to
-  // flatten to the same vector, otherwise position in the vector would depend
-  // on how the caller happened to assemble the gradient.
-  const first: Gradient = [
-    { 𝓁: 1, w: [[1, 2]], b: [3] },
-    { 𝓁: 2, w: [[4], [5]], b: [6] },
-  ]
-  const reversed: Gradient = [...first].reverse()
+Deno.test(
+  'gradientAsVector / does not depend on the order the layers arrive in',
+  () => {
+    // The sort exists for this: the same gradient expressed in any order has to
+    // flatten to the same vector, otherwise position in the vector would depend
+    // on how the caller happened to assemble the gradient.
+    const first: Gradient = [
+      { 𝓁: 1, w: [[1, 2]], b: [3] },
+      { 𝓁: 2, w: [[4], [5]], b: [6] },
+    ]
+    const reversed: Gradient = [...first].reverse()
 
-  assertEquals(gradientAsVector(reversed), gradientAsVector(first))
-  assertEquals(gradientAsVector([first[1], first[0]]), gradientAsVector(first))
-})
+    assertEquals(gradientAsVector(reversed), gradientAsVector(first))
+    assertEquals(
+      gradientAsVector([first[1], first[0]]),
+      gradientAsVector(first),
+    )
+  },
+)
 
-Deno.test('gradientAsVector / flattens a weight matrix in row-major order', () => {
-  // A 2x2 matrix reads left to right, top to bottom — the same order the
-  // matrix is indexed with, so w[i][j] keeps a predictable slot.
-  const gradient: Gradient = [{ 𝓁: 1, w: [[1, 2], [3, 4]], b: [5, 6] }]
+Deno.test(
+  'gradientAsVector / flattens a weight matrix in row-major order',
+  () => {
+    // A 2x2 matrix reads left to right, top to bottom — the same order the
+    // matrix is indexed with, so w[i][j] keeps a predictable slot.
+    const gradient: Gradient = [
+      {
+        𝓁: 1,
+        w: [
+          [1, 2],
+          [3, 4],
+        ],
+        b: [5, 6],
+      },
+    ]
 
-  assertEquals(gradientAsVector(gradient), [1, 2, 3, 4, 5, 6])
-})
+    assertEquals(gradientAsVector(gradient), [1, 2, 3, 4, 5, 6])
+  },
+)
 
 Deno.test('gradientAsVector / keeps every layer block contiguous', () => {
   // A layer's biases follow all of that layer's weights, not its own row: no
   // value from the next layer may slip in between w and b.
   const gradient: Gradient = [
-    { 𝓁: 1, w: [[1, 2], [3, 4]], b: [5, 6] },
+    {
+      𝓁: 1,
+      w: [
+        [1, 2],
+        [3, 4],
+      ],
+      b: [5, 6],
+    },
     { 𝓁: 2, w: [[7], [8], [9]], b: [10] },
   ]
 
@@ -636,8 +857,23 @@ Deno.test('gradientAsVector / keeps every layer block contiguous', () => {
 
 Deno.test('gradientAsVector / yields one entry per trainable parameter', () => {
   const gradient: Gradient = [
-    { 𝓁: 1, w: [[1, 2, 3], [4, 5, 6]], b: [7, 8] }, // 6 weights + 2 biases
-    { 𝓁: 2, w: [[9, 10], [11, 12], [13, 14]], b: [15, 16, 17] },
+    {
+      𝓁: 1,
+      w: [
+        [1, 2, 3],
+        [4, 5, 6],
+      ],
+      b: [7, 8],
+    }, // 6 weights + 2 biases
+    {
+      𝓁: 2,
+      w: [
+        [9, 10],
+        [11, 12],
+        [13, 14],
+      ],
+      b: [15, 16, 17],
+    },
   ]
   const expectedLength = gradient.reduce(
     (total, layer) => total + layer.w.flat().length + layer.b.length,
@@ -662,7 +898,10 @@ Deno.test('gradientAsVector / leaves the gradient untouched', () => {
   vector[0] = 999
 
   assertEquals(gradient, snapshot)
-  assertEquals(gradient.map(layer => layer.𝓁), [2, 1])
+  assertEquals(
+    gradient.map(layer => layer.𝓁),
+    [2, 1],
+  )
   assertEquals(vector, [999, 2, 3, 4, 5, 6])
 })
 
@@ -670,29 +909,35 @@ Deno.test('gradientAsVector / an empty gradient yields an empty vector', () => {
   assertEquals(gradientAsVector([]), [])
 })
 
-Deno.test('gradientAsVector / flattens a real gradient in ascending 𝓁 order', () => {
-  // The real case the sort was written for: calculateGradient walks the layers
-  // from the output backwards, so its gradient arrives in the opposite order to
-  // the vector this function produces.
-  const net = makeTinyNetwork()
-  net.loadSample([1, 0], 1)
-  net.feedForward()
+Deno.test(
+  'gradientAsVector / flattens a real gradient in ascending 𝓁 order',
+  () => {
+    // The real case the sort was written for: calculateGradient walks the layers
+    // from the output backwards, so its gradient arrives in the opposite order to
+    // the vector this function produces.
+    const net = makeTinyNetwork()
+    net.loadSample([1, 0], 1)
+    net.feedForward()
 
-  const gradient = net.calculateGradient()
+    const gradient = net.calculateGradient()
 
-  assertEquals(gradient.map(layer => layer.𝓁), [2, 1])
+    assertEquals(
+      gradient.map(layer => layer.𝓁),
+      [2, 1],
+    )
 
-  const [output, hidden] = gradient
-  const expected = [
-    ...hidden.w.flat(),
-    ...hidden.b,
-    ...output.w.flat(),
-    ...output.b,
-  ]
+    const [output, hidden] = gradient
+    const expected = [
+      ...hidden.w.flat(),
+      ...hidden.b,
+      ...output.w.flat(),
+      ...output.b,
+    ]
 
-  assertArrayClose(gradientAsVector(gradient), expected)
+    assertArrayClose(gradientAsVector(gradient), expected)
 
-  // And the vector spans the network's parameters exactly: two 2x2 weight
-  // matrices, four biases, no input-layer slot.
-  assertEquals(gradientAsVector(gradient).length, 2 * 2 * 2 + 4)
-})
+    // And the vector spans the network's parameters exactly: two 2x2 weight
+    // matrices, four biases, no input-layer slot.
+    assertEquals(gradientAsVector(gradient).length, 2 * 2 * 2 + 4)
+  },
+)

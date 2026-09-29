@@ -41,7 +41,7 @@ memory; `--allow-read` grants access to the `./data` directory.
 ### Running the tests
 
 ```sh
-deno test --allow-read   # 168 tests across the whole suite
+deno test --allow-read   # 169 tests across the whole suite
 deno lint               # type-lint the source and the tests
 ```
 
