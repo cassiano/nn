@@ -399,13 +399,13 @@ export class Network {
         summedB = addVectors(summedB, layer.b)
       }
 
-      const averageLayerGradient: GradientLayer = {
+      const averageGradientLayer: GradientLayer = {
         𝓁,
         w: divideMatrixByScalar(summedW, size),
         b: divideVectorByScalar(summedB, size),
       }
 
-      averageGradient.push(averageLayerGradient)
+      averageGradient.push(averageGradientLayer)
     })
 
     return averageGradient
