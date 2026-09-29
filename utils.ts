@@ -1,4 +1,4 @@
-import { NumericMatrix, NumericVector } from './types.ts'
+import { NumericMatrix, NumericVector, Gradient } from './types.ts'
 
 /**
  * Re-maps a `value` from the range [lower, higher] to the range
@@ -610,3 +610,33 @@ export const formatPercentageWithDecimalPlaces = (
   value: number,
   decimalPlaces: number,
 ) => Math.round(value * 100 * 10 ** decimalPlaces) / 10 ** decimalPlaces
+
+/**
+ * Flattens every layer of a gradient into a single vector, so all of a
+ * network's trainable parameters can be handled as one list instead of one
+ * layer at a time.
+ *
+ * The layers are ordered by 𝓁 (first hidden layer, …, output layer) first, so
+ * the result does not depend on the order they arrive in — a gradient straight
+ * from {@link Network.calculateGradient} comes back from the output layer
+ * downwards. Each layer contributes its weights in row-major order, then its
+ * biases, and the blocks are concatenated with no padding in between.
+ *
+ * @param gradient One {@link GradientLayer} per trainable layer, each carrying
+ * that layer's ∂C/∂w and ∂C/∂b.
+ * @returns A new vector of length equal to the total number of trainable
+ * parameters, laid out as [w(1)…, b(1), w(2)…, b(2), …] in ascending 𝓁. The
+ * gradient itself is left untouched (the sorting copies it), and an empty
+ * gradient yields `[]`.
+ * @example
+ * gradientAsVector([
+ *   { 𝓁: 2, w: [[4], [5]], b: [6] }, // output layer: 2 neurons, 1 input each
+ *   { 𝓁: 1, w: [[1, 2]], b: [3] }, // hidden layer: 1 neuron, 2 inputs
+ * ])
+ * // => [1, 2, 3, 4, 5, 6]
+ */
+export const gradientAsVector = (gradient: Gradient): NumericVector => {
+  const sortedGradient = gradient.toSorted((left, right) => left.𝓁 - right.𝓁)
+
+  return sortedGradient.flatMap(layer => [...layer.w.flat(2), ...layer.b])
+}

@@ -24,9 +24,12 @@ import {
   hadamardProduct,
   random,
   shuffle,
+  gradientAsVector,
   formatPercentageWithDecimalPlaces,
 } from '../utils.ts'
+import { Gradient } from '../types.ts'
 import {
+  makeTinyNetwork,
   assert,
   assertEquals,
   assertThrows,
@@ -585,4 +588,111 @@ Deno.test('formatPercentageWithDecimalPlaces / rounds the halfway case up', () =
   assertClose(formatPercentageWithDecimalPlaces(0.125, 1), 12.5, 1e-9)
   assertClose(formatPercentageWithDecimalPlaces(0.126, 1), 12.6, 1e-9)
   assertClose(formatPercentageWithDecimalPlaces(0.124, 1), 12.4, 1e-9)
+})
+
+Deno.test('gradientAsVector / orders layers by 𝓁 and flattens weights then biases', () => {
+  // The layout: one contiguous block per layer, ascending 𝓁, each block being
+  // the layer's weights in row-major order followed by its biases.
+  const gradient: Gradient = [
+    { 𝓁: 2, w: [[4], [5]], b: [6] },
+    { 𝓁: 1, w: [[1, 2]], b: [3] },
+  ]
+
+  assertEquals(gradientAsVector(gradient), [1, 2, 3, 4, 5, 6])
+})
+
+Deno.test('gradientAsVector / does not depend on the order the layers arrive in', () => {
+  // The sort exists for this: the same gradient expressed in any order has to
+  // flatten to the same vector, otherwise position in the vector would depend
+  // on how the caller happened to assemble the gradient.
+  const first: Gradient = [
+    { 𝓁: 1, w: [[1, 2]], b: [3] },
+    { 𝓁: 2, w: [[4], [5]], b: [6] },
+  ]
+  const reversed: Gradient = [...first].reverse()
+
+  assertEquals(gradientAsVector(reversed), gradientAsVector(first))
+  assertEquals(gradientAsVector([first[1], first[0]]), gradientAsVector(first))
+})
+
+Deno.test('gradientAsVector / flattens a weight matrix in row-major order', () => {
+  // A 2x2 matrix reads left to right, top to bottom — the same order the
+  // matrix is indexed with, so w[i][j] keeps a predictable slot.
+  const gradient: Gradient = [{ 𝓁: 1, w: [[1, 2], [3, 4]], b: [5, 6] }]
+
+  assertEquals(gradientAsVector(gradient), [1, 2, 3, 4, 5, 6])
+})
+
+Deno.test('gradientAsVector / keeps every layer block contiguous', () => {
+  // A layer's biases follow all of that layer's weights, not its own row: no
+  // value from the next layer may slip in between w and b.
+  const gradient: Gradient = [
+    { 𝓁: 1, w: [[1, 2], [3, 4]], b: [5, 6] },
+    { 𝓁: 2, w: [[7], [8], [9]], b: [10] },
+  ]
+
+  assertEquals(gradientAsVector(gradient), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+})
+
+Deno.test('gradientAsVector / yields one entry per trainable parameter', () => {
+  const gradient: Gradient = [
+    { 𝓁: 1, w: [[1, 2, 3], [4, 5, 6]], b: [7, 8] }, // 6 weights + 2 biases
+    { 𝓁: 2, w: [[9, 10], [11, 12], [13, 14]], b: [15, 16, 17] },
+  ]
+  const expectedLength = gradient.reduce(
+    (total, layer) => total + layer.w.flat().length + layer.b.length,
+    0,
+  )
+
+  assertEquals(gradientAsVector(gradient).length, expectedLength)
+})
+
+Deno.test('gradientAsVector / leaves the gradient untouched', () => {
+  // toSorted copies, so the caller's array keeps both its order and its
+  // contents — a flat view must not cost the caller its gradient.
+  const gradient: Gradient = [
+    { 𝓁: 2, w: [[4], [5]], b: [6] },
+    { 𝓁: 1, w: [[1, 2]], b: [3] },
+  ]
+  const snapshot = JSON.parse(JSON.stringify(gradient))
+
+  // Poking the result must not write through to the gradient, so it is a fresh
+  // array rather than a view onto the layers' own arrays.
+  const vector = gradientAsVector(gradient)
+  vector[0] = 999
+
+  assertEquals(gradient, snapshot)
+  assertEquals(gradient.map(layer => layer.𝓁), [2, 1])
+  assertEquals(vector, [999, 2, 3, 4, 5, 6])
+})
+
+Deno.test('gradientAsVector / an empty gradient yields an empty vector', () => {
+  assertEquals(gradientAsVector([]), [])
+})
+
+Deno.test('gradientAsVector / flattens a real gradient in ascending 𝓁 order', () => {
+  // The real case the sort was written for: calculateGradient walks the layers
+  // from the output backwards, so its gradient arrives in the opposite order to
+  // the vector this function produces.
+  const net = makeTinyNetwork()
+  net.loadSample([1, 0], 1)
+  net.feedForward()
+
+  const gradient = net.calculateGradient()
+
+  assertEquals(gradient.map(layer => layer.𝓁), [2, 1])
+
+  const [output, hidden] = gradient
+  const expected = [
+    ...hidden.w.flat(),
+    ...hidden.b,
+    ...output.w.flat(),
+    ...output.b,
+  ]
+
+  assertArrayClose(gradientAsVector(gradient), expected)
+
+  // And the vector spans the network's parameters exactly: two 2x2 weight
+  // matrices, four biases, no input-layer slot.
+  assertEquals(gradientAsVector(gradient).length, 2 * 2 * 2 + 4)
 })
