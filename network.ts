@@ -182,8 +182,10 @@ export class Network {
    * a(𝐋): C = Σ(yᵢ - a(𝐋)ᵢ)², summed over the output neurons.
    *
    * Note there is no 1/n normalization here, which only rescales the gradient
-   * and therefore the effective learning rate: averaging a batch of n gradients
-   * before {@link Network.backPropagate} makes the effective rate η/n.
+   * and therefore the effective learning rate:
+   * {@link Network.calculateAverageGradient} divides by the batch size, and
+   * {@link Network.backPropagate} multiplies back by {@link BATCH_SIZE}, so the
+   * per-sample rate stays η.
    */
   get cost(): number {
     return timesMap(
@@ -202,6 +204,13 @@ export class Network {
     return this.layers.length - 1
   }
 
+  /**
+   * The digit this network currently predicts: the index of the highest
+   * activation on the output layer, which for softmax is the most probable
+   * digit. Requires a prior {@link Network.feedForward}.
+   *
+   * @returns An index into the output layer, 0-9 for MNIST.
+   */
   predictedDigit() {
     const predictedDigitProbability = Math.max(...this.outputLayer.a)
 
@@ -229,9 +238,10 @@ export class Network {
    * @returns A {@link Gradient}: one {@link GradientLayer} per trainable layer,
    * ordered output layer (𝓁 = 𝐋) first, then each inner layer descending to 1.
    * Each `w` is shaped [size][previous layer size] and each `b` is [size], so
-   * they can be applied straight onto the matching parameters. Note each `b` is
-   * the layer's own δ array handed over by reference, not a copy, so a caller
-   * that mutates it in place also mutates the layer.
+   * they can be applied straight onto the matching parameters. Both are fresh
+   * arrays — `b` is a copy of the layer's δ, not the layer's own array — so the
+   * gradient can be batched, averaged or kept around without the layers
+   * changing underneath it.
    * @throws If any layer except the input has no activation function σ
    * configured, since σ' is needed to build δ.
    */
@@ -282,13 +292,21 @@ export class Network {
 
   /**
    * Performs one gradient-descent step over all trainable parameters, using
-   * the learning rate {@link Network.η}:
+   * the learning rate {@link Network.η} and {@link BATCH_SIZE}:
    *
-   *   w(𝓁) ← w(𝓁) - η·∂C/∂w(𝓁)
-   *   b(𝓁) ← b(𝓁) - η·∂C/∂b(𝓁)
+   *   w(𝓁) ← w(𝓁) - η·BATCH_SIZE·∂C/∂w(𝓁)
+   *   b(𝓁) ← b(𝓁) - η·BATCH_SIZE·∂C/∂b(𝓁)
    *
    * Because ∂C is added with a negated, scaled matrix/vector, weights and biases
    * move *against* the gradient, reducing the cost on the current sample.
+   *
+   * The BATCH_SIZE factor cancels the 1/BATCH_SIZE that
+   * {@link Network.calculateAverageGradient} divides by, so η keeps its meaning
+   * as the per-sample rate and the step size does not silently depend on the
+   * batch size. It is exact only for a batch of exactly BATCH_SIZE samples: a
+   * shorter one is over-scaled by the ratio between the two. Note also that
+   * this reads BATCH_SIZE from `constants.ts` rather than from the gradient, so
+   * a batch of a different length is not adjusted for.
    *
    * The gradient is applied as it arrives, so one call covers whichever samples
    * it already summarizes: a single per-sample {@link Gradient} gives an SGD
@@ -296,13 +314,13 @@ export class Network {
    * a mini-batch step. An epoch is a loop over those steps, not over samples.
    *
    * Mutates each layer's `w` and `b` in place (replacing them with new arrays)
-   * and returns nothing. Entries are addressed by their own {@link
-   * LayerGradient.𝓁} index, so a gradient from a network with a different
-   * layer count is applied as-is rather than rejected.
+   * and returns nothing. Entries are addressed by their own
+   * {@link GradientLayer.𝓁} index, so a gradient built for a network with a
+   * different layer count is rejected rather than applied to the wrong layer.
    *
-   * @throws If a weight or bias shape does not line up with its gradient (from
-   * {@link addMatrices}/{@link addVectors}), or with a TypeError if an entry's
-   * `𝓁` is not a valid layer index.
+   * @throws If an entry's `𝓁` is not a layer of this network, or if a weight or
+   * bias shape does not line up with its gradient (from
+   * {@link addMatrices}/{@link addVectors}).
    */
   backPropagate(gradient: Gradient) {
     for (const { 𝓁, b, w } of gradient) {
@@ -339,9 +357,9 @@ export class Network {
    * {@link Network.calculateGradient} produced works, output layer first.
    * Entries past position `this.𝐋` are ignored.
    *
-   * Nothing is mutated: the sum starts from a zeroed copy and the helpers all
-   * return fresh arrays, so the batch survives the call — including the δ
-   * arrays {@link Network.calculateGradient} shares with the layers.
+   * Nothing is mutated: the sum starts from a zero-filled matrix/vector of the
+   * first entry's shape and the helpers all return fresh arrays, so the batch
+   * and the layers' δ survive the call untouched.
    *
    * @param gradients One {@link Gradient} per sample, each covering the same
    * trainable layers in the same order.
@@ -350,8 +368,9 @@ export class Network {
    * sample's shapes.
    * @throws If `gradients` is empty, if two samples disagree about the `𝓁` at
    * some position, with a TypeError if a sample has fewer entries than this
-   * network has trainable layers, or if a summed `w`/`b` shape disagrees with
-   * the running sum (from {@link addMatrices}/{@link addVectors}).
+   * network has trainable layers, if an entry has an empty `w` (its column count
+   * is read from row 0), or if a summed `w`/`b` shape disagrees with the running
+   * sum (from {@link addMatrices}/{@link addVectors}).
    */
   calculateAverageGradient(gradients: Gradient[]): Gradient {
     if (gradients.length === 0)

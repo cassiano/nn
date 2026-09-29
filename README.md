@@ -23,8 +23,9 @@ Built with **Deno** + **TypeScript** (fully type-checked, zero runtime deps).
 
 The network now trains: each sample's gradient is computed layer-by-layer,
 averaged over a batch of 60 and applied to the weights, for 5 epochs of
-mini-batch gradient descent (see `constants.ts`). Accuracy on the test split is
-printed per image at the end of a run.
+mini-batch gradient descent (see `constants.ts`). Progress and the running
+accuracy are printed per batch while training, and the test split is scored
+image by image at the end of the run.
 
 ## How to run
 
@@ -57,7 +58,7 @@ network harnesses).
 ├── layer.ts          # Layer class — weights/bias, z/w/a computation, per-layer gradient
 ├── activation.ts     # Activation functions + derivatives (sigmoid, relu, tanh, softmax)
 ├── mnist_loader.ts   # IDX parsing of the MNIST dataset (+ ASCII image renderer)
-├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, …)
+├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, Gradient, …)
 ├── utils.ts          # Loop helpers, matrix ops, random, shuffle, assertions
 ├── constants.ts      # Hyperparameters and the network topology
 ├── tests/            # Automated test suite (105 tests) + shared test helpers
@@ -82,9 +83,17 @@ weight matrix plus a bias vector, initialized randomly in (-1, 1). Total:
 **12960 weights + 42 biases = 13002 parameters** (see
 `Network.parameterCount`).
 
+Training hyperparameters, all in `constants.ts`:
+
+| Constant                    | Value | Meaning                                  |
+| --------------------------- | ----- | ---------------------------------------- |
+| `NETWORK_LEARNING_RATE` (η) | 0.002 | Step size, per sample (see step 6 below) |
+| `BATCH_SIZE`                | 60    | Samples averaged into one weight update  |
+| `EPOCHS`                    | 5     | Passes over the training set             |
+
 ## How a training step flows through
 
-1. **`main`**(`main.ts`) — every epoch shuffles the sample order and slices it
+1. **`main`**(`main.ts`) — every epoch reshuffles the sample order and slices it
    into batches of `BATCH_SIZE` (60). For each sample in a batch the label 0–9
    is converted to a one-hot vector `y` (`Network.loadSample`), e.g.
    `3 → [0,0,0,1,0,0,0,0,0,0]`.
@@ -101,10 +110,14 @@ weight matrix plus a bias vector, initialized randomly in (-1, 1). Total:
 5. **Batch mean** (`Network.calculateAverageGradient`) — one mean gradient per
    batch, each sample weighted 1/60.
 6. **Weight update** (`Network.backPropagate`) — steps every layer against that
-   mean: `w ← w - η·∂C/∂w`, `b ← b - η·∂C/∂b`, with η = 0.01. Averaging over
-   the batch makes the effective rate η/60.
-7. **Evaluation** — each test image is run through the network on its own and
-   its prediction, cost and the running hit/miss tally are logged.
+   mean: `w ← w - η·BATCH_SIZE·∂C/∂w`, `b ← b - η·BATCH_SIZE·∂C/∂b`, with
+   η = 0.002. The BATCH_SIZE factor cancels the 1/60 from step 5, so η stays a
+   per-sample rate.
+7. **Evaluation** — each test image is run through the network on its own,
+   logging every 1000th one, and a final summary reports the overall test
+   accuracy. During training each batch reports its cost, a running average cost
+   and the running epoch accuracy, always for the weights _before_ that batch's
+   update.
 
 ### Notation used in the code
 
@@ -123,8 +136,11 @@ equations in code close to their written math form.
 
 ### `mnist_loader.ts`
 
-Parses the gzipped **IDX** files into `TrainingData` (`inputs`, `labels`).
-Images are flattened 28×28 → 784 values, normalized to `[0, 1]` by dividing by 255. Also ships `MnistLoader.imageToText`, which renders an image as ASCII art
+Parses the zipped **IDX** files into `TrainingData` (`inputs`, `labels`), split
+into `trainingData` (60k images) and `testData` (10k images). Images are
+flattened 28×28 → 784 values, normalized to `[0, 1]` by dividing by 255. Also
+ships `MnistLoader.imageAsText('trainingData' | 'testData', i)` (backed by the
+static `imageToText`), which renders an image as ASCII art
 using the ` ░▒▓▉█` gradient — handy for eyeballing loaded samples.
 
 #### IDX format (after gunzip)
@@ -147,16 +163,21 @@ Tiny functional helpers used throughout:
 - `map` — re-map a value between ranges (with optional clamping), e.g. pixel
   brightness → unicode character index
 - `random`, `shuffle` (Fisher–Yates) — randomness utilities
+- `createMatrix` / `createVector` — matrices and vectors filled with a repeated
+  value or a per-cell function, e.g. the random weight initialization
 - `toMatrix` / `fromMatrix` — N×1 column-vector conversion
 - `addMatrices` / `addVectors` / `hadamardProduct` — element-wise matrix/vector
   arithmetic (validated against shape mismatches with clear errors)
 - `multiplyMatrices` / `transposeMatrix` — dot-product and transpose
-- `multiplyMatrixByScalar` / `multiplyVectorByScalar` — used to scale a
-  gradient by the learning rate
+- `multiplyMatrixByScalar` / `multiplyVectorByScalar` and their
+  `divide…ByScalar` counterparts — scaling a gradient, by the learning rate or
+  by the batch size (the divide variants throw on a 0 divisor)
+- `formatWithDecimalPlaces` — renders a number to fixed precision for the logs
 - `assertIsNotUndefined` / `assertIsNotNull` / `assertIsNotUndefinedOrNull` —
   type-guard assertions that narrow types at runtime
 
-Every helper returns fresh arrays; none of them mutate their operands.
+Every helper returns fresh arrays rather than mutating its operands. The one
+exception is `shuffle`, which permutes the array it is given in place.
 
 ### `activation.ts`
 
@@ -178,13 +199,13 @@ for the current sample; the partial derivatives `∂C/∂w`, `∂C/∂b` are bui
 
 Ties layers together; owns the current sample's one-hot target `y`, exposes
 `inputLayer` / `outputLayer`, drives the forward pass, and computes the cost.
-`calculateGradient()` returns one `LayerGradient` per trainable layer;
+`calculateGradient()` returns one `GradientLayer` per trainable layer;
 `calculateAverageGradient()` reduces a batch of them to a single mean gradient;
-`backPropagate()` applies that gradient, scaled by η, to every layer. Note that
-`calculateAverageGradient` pairs a batch up **by entry position**, so every
-sample in a batch must list its layers in the same order — a sample that
-disagrees about a layer's `𝓁` at some position is rejected rather than
-averaged.
+`backPropagate()` applies that gradient, scaled by η and `BATCH_SIZE`, to every
+layer. Note that `calculateAverageGradient` pairs a batch up **by entry
+position**, so every sample in a batch must list its layers in the same order —
+a sample that disagrees about a layer's `𝓁` at some position is rejected rather
+than averaged.
 
 ## License
 

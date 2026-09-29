@@ -10,7 +10,7 @@ import {
   assertIsNotNull,
   timesMap,
   shuffle,
-  formatWithDecimalPlaces,
+  formatPercentageWithDecimalPlaces,
 } from './utils.ts'
 import { Gradient } from './types.ts'
 import { timesForEach } from './utils.ts'
@@ -27,25 +27,31 @@ let loader: MnistLoader
  * on the test split.
  *
  * Training is a double loop over epochs and batches of {@link BATCH_SIZE}
- * samples. Each epoch shuffles a fresh index array and hands out consecutive
- * slices of it, so every epoch sees the data in a different order. Only one
- * sample is loaded into the network at a time, so each batch is accumulated
- * first: per sample {@link Network.loadSample} → {@link Network.feedForward} →
- * {@link Network.calculateGradient}, then
+ * samples. Each epoch reshuffles the sample order, so every epoch sees the data
+ * in a different order. Only one sample is loaded into the network at a time, so
+ * each batch is accumulated first: per sample {@link Network.loadSample} →
+ * {@link Network.feedForward} → {@link Network.calculateGradient}, then
  * {@link Network.calculateAverageGradient} turns the batch into one mean
  * gradient and a single {@link Network.backPropagate} applies it. Only whole
  * batches are trained, so `inputs.length % BATCH_SIZE` trailing samples are
  * dropped each epoch.
  *
- * Afterwards, each test image is run through the network one at a time and the
- * prediction, cost and running hit/miss tally are logged.
+ * While training, each batch is predicted on the fly and reported in place
+ * (the console is cleared first, so only the current batch is visible): the
+ * cost of its last sample, a running average of the cost over every batch so
+ * far, the running hit/miss counts and the accuracy so far in this epoch.
+ * Those numbers describe the weights as they were *before* the batch's update,
+ * so the last line of the last epoch is the honest one.
+ *
+ * Afterwards, each test image is run through the network on its own, logging
+ * every 1000th image, and a final summary reports the overall test accuracy.
  *
  * @returns Nothing. Resolves once every test sample has been scored.
  * @throws If the dataset files are missing or malformed, or if the topology
  * fails the MNIST size validation.
  */
 const main = async () => {
-  // Load the MNIST dataset from the gzipped IDX files in ./mnist.
+  // Load the MNIST dataset from the zipped IDX files in ./data/mnist.
   loader = new MnistLoader()
   await loader.load(console.log)
   assertIsNotNull(loader.trainingData)
@@ -104,7 +110,7 @@ const main = async () => {
         hits,
         misses,
         avgCost,
-        epochAccuracy: `${formatWithDecimalPlaces(hits / ((batchIdx + 1) * BATCH_SIZE), 2)}%`,
+        epochAccuracy: `${formatPercentageWithDecimalPlaces(hits / ((batchIdx + 1) * BATCH_SIZE), 2)}%`,
       })
 
       const averageGradient = network.calculateAverageGradient(batchGradients)
@@ -139,7 +145,7 @@ const main = async () => {
         cost: network.cost,
         hits,
         misses,
-        effectiveAccuracy: `${formatWithDecimalPlaces(hits / (i + 1), 2)}%`,
+        effectiveAccuracy: `${formatPercentageWithDecimalPlaces(hits / (i + 1), 2)}%`,
       })
   })
 
@@ -153,7 +159,7 @@ const main = async () => {
     cost: network.cost,
     hits,
     misses,
-    finalAccuracy: `${formatWithDecimalPlaces(hits / testInputs.length, 2)}%`,
+    finalAccuracy: `${formatPercentageWithDecimalPlaces(hits / testInputs.length, 2)}%`,
   })
 }
 

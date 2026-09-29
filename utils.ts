@@ -276,6 +276,20 @@ export function assertIsNotUndefinedOrNull<T>(
     )
 }
 
+/**
+ * Builds a `rows` x `cols` matrix whose entries are all the same value, or all
+ * produced by the same function. Used to allocate weight matrices and to seed
+ * accumulators with a zero-filled matrix, where aliasing the seed would leak
+ * into the caller's data.
+ *
+ * @param rows Number of rows; values below 1 produce `[]`.
+ * @param cols Number of columns per row.
+ * @param initialValueOrFn Either the value to repeat in every cell, or a
+ * function called once per cell (e.g. `() => random(-1, 1)`).
+ * @returns A new matrix of the given shape. A function is invoked in row-major
+ * order, `rows * cols` times in total.
+ * @example createMatrix(2, 2, 0) // => [[0, 0], [0, 0]]
+ */
 export const createMatrix = (
   rows: number,
   cols: number,
@@ -288,6 +302,17 @@ export const createMatrix = (
       : () => initialValueOrFn,
   )
 
+/**
+ * Builds a vector of `size` entries, all the same value, or all produced by the
+ * same function. The vector counterpart of {@link createMatrix}, used e.g. for
+ * bias vectors and zero-filled accumulators.
+ *
+ * @param size Number of entries; values below 1 produce `[]`.
+ * @param initialValueOrFn Either the value to repeat in every entry, or a
+ * function called once per entry (e.g. `() => random(-1, 1)`).
+ * @returns A new vector of the given length.
+ * @example createVector(3, 0) // => [0, 0, 0]
+ */
 export const createVector = (
   size: number,
   initialValueOrFn: number | (() => number),
@@ -446,6 +471,16 @@ export const multiplyMatrixByScalar = (
   )
 }
 
+/**
+ * Divides every entry of a matrix by a single scalar, used to turn a summed
+ * batch gradient into its mean.
+ *
+ * @param matrix The matrix to scale, of shape [rows][cols].
+ * @param scalar The divisor; must not be 0.
+ * @returns A new matrix of the same shape holding `matrix[i][j] / scalar`.
+ * @throws If `scalar` is 0, rather than filling the matrix with
+ * Infinity/NaN.
+ */
 export const divideMatrixByScalar = (
   matrix: NumericMatrix,
   scalar: number,
@@ -512,6 +547,15 @@ export const multiplyVectorByScalar = (
   return vector.map(value => value * scalar)
 }
 
+/**
+ * Divides every entry of a vector by a single scalar, the vector counterpart of
+ * {@link divideMatrixByScalar}.
+ *
+ * @param vector The vector to scale.
+ * @param scalar The divisor; must not be 0.
+ * @returns A new vector of the same length holding `vector[i] / scalar`.
+ * @throws If `scalar` is 0.
+ */
 export const divideVectorByScalar = (
   vector: NumericVector,
   scalar: number,
@@ -549,5 +593,19 @@ export const shuffle = (array: number[]): void => {
   }
 }
 
-export const formatWithDecimalPlaces = (value: number, decimalPlaces: number) =>
-  Math.round(value * 100 * 10 ** decimalPlaces) / 10 ** decimalPlaces
+/**
+ * Rounds a number to a fixed number of decimal places and returns it as a
+ * string, so percentages and rates read the same in every log line regardless
+ * of how many digits they happen to need (a bare `0.5` vs `0.55555`).
+ *
+ * @param value The number to format; NaN and Infinity are returned as-is
+ * because {@link Math.round} yields NaN for them.
+ * @param decimalPlaces How many digits to keep after the decimal point.
+ * Negative values round tens, hundreds, etc. instead.
+ * @returns The rounded value as a string, e.g. `'98.57'`.
+ * @example formatWithDecimalPlaces(0.985678, 2) // => '98.57'
+ */
+export const formatPercentageWithDecimalPlaces = (
+  value: number,
+  decimalPlaces: number,
+) => Math.round(value * 100 * 10 ** decimalPlaces) / 10 ** decimalPlaces
