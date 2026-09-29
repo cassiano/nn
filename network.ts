@@ -257,6 +257,8 @@ export class Network {
       const σDerivatives: NumericVector = currentLayer.z.map(
         currentLayer.σDerivativeFn,
       )
+
+      // ∂C/∂a
       const dCostDActivation: NumericVector = currentLayer.isOutputLayer
         ? currentLayer.a.map(
             (activationValue, i) => 2 * (activationValue - this.y[i]),
