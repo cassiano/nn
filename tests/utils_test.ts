@@ -9,16 +9,30 @@ import {
   assertIsNotUndefined,
   assertIsNotNull,
   assertIsNotUndefinedOrNull,
+  createMatrix,
+  createVector,
   toMatrix,
   fromMatrix,
   addMatrices,
+  addVectors,
   multiplyMatrices,
   transposeMatrix,
+  multiplyMatrixByScalar,
+  multiplyVectorByScalar,
+  divideMatrixByScalar,
+  divideVectorByScalar,
   hadamardProduct,
   random,
   shuffle,
+  formatPercentageWithDecimalPlaces,
 } from '../utils.ts'
-import { assert, assertEquals, assertThrows } from './test_helpers.ts'
+import {
+  assert,
+  assertEquals,
+  assertThrows,
+  assertClose,
+  assertArrayClose,
+} from './test_helpers.ts'
 
 Deno.test('map / performs linear interpolation', () => {
   assertEquals(map(5, 0, 10, 0, 100), 50)
@@ -386,4 +400,189 @@ Deno.test('shuffle / mutates the array in place and returns nothing', () => {
   const array = [1, 2, 3]
   assertEquals(shuffle(array), undefined)
   assertEquals(array.length, 3)
+})
+
+Deno.test('createMatrix / fills every cell with the given value', () => {
+  assertEquals(createMatrix(2, 3, 7), [
+    [7, 7, 7],
+    [7, 7, 7],
+  ])
+  assertEquals(createMatrix(1, 1, -0.5), [[-0.5]])
+})
+
+Deno.test('createMatrix / calls the function once per cell, in order', () => {
+  // Row-major order, one invocation per cell, which is what a random weight
+  // initializer relies on for an independent value per weight.
+  const calls: number[] = []
+  const matrix = createMatrix(2, 2, () => {
+    calls.push(calls.length)
+    return calls.length
+  })
+
+  assertEquals(matrix, [
+    [1, 2],
+    [3, 4],
+  ])
+  assertEquals(calls, [0, 1, 2, 3])
+})
+
+Deno.test('createMatrix / zero dimensions produce an empty matrix', () => {
+  assertEquals(createMatrix(0, 5, 1), [])
+  // Zero columns still yields the requested number of rows, each of them empty:
+  // the row count is filled in before the column count is consulted.
+  assertEquals(createMatrix(2, 0, 1), [[], []])
+})
+
+Deno.test('createVector / fills every entry with the given value', () => {
+  assertEquals(createVector(3, 0), [0, 0, 0])
+  assertEquals(createVector(1, 2.5), [2.5])
+})
+
+Deno.test('createVector / calls the function once per entry', () => {
+  let counter = 0
+  assertEquals(
+    createVector(3, () => ++counter),
+    [1, 2, 3],
+  )
+})
+
+Deno.test('createVector / size 0 produces an empty vector', () => {
+  assertEquals(createVector(0, 1), [])
+})
+
+Deno.test('createVector / matches the size of a same-shaped createMatrix column', () => {
+  const vector = createVector(3, 0)
+  const column = createMatrix(3, 1, 0).map(([value]) => value)
+
+  assertEquals(vector, column)
+})
+
+Deno.test('multiplyMatrixByScalar / scales every entry', () => {
+  assertEquals(multiplyMatrixByScalar([[1, 2], [3, 4]], 2), [
+    [2, 4],
+    [6, 8],
+  ])
+  assertEquals(multiplyMatrixByScalar([[1.5, -2]], 0.5), [[0.75, -1]])
+})
+
+Deno.test('multiplyMatrixByScalar / accepts a negative factor', () => {
+  // backPropagate relies on this: the gradient is scaled by -η to move the
+  // weights against it.
+  assertEquals(multiplyMatrixByScalar([[1, -2]], -0.1), [[-0.1, 0.2]])
+})
+
+Deno.test('multiplyMatrixByScalar / an empty matrix stays empty', () => {
+  assertEquals(multiplyMatrixByScalar([], 3), [])
+})
+
+Deno.test('multiplyVectorByScalar / scales every entry', () => {
+  assertArrayClose(multiplyVectorByScalar([1, 2, 3], 2), [2, 4, 6])
+  assertArrayClose(multiplyVectorByScalar([1, -1], 0.25), [0.25, -0.25])
+})
+
+Deno.test('multiplyVectorByScalar / an empty vector stays empty', () => {
+  assertEquals(multiplyVectorByScalar([], 3), [])
+})
+
+Deno.test('divideMatrixByScalar / divides every entry', () => {
+  assertArrayClose(
+    divideMatrixByScalar([[2, 4], [6, 8]], 2).flat(),
+    [1, 2, 3, 4],
+  )
+  assertArrayClose(divideMatrixByScalar([[1]], 4).flat(), [0.25])
+})
+
+Deno.test('divideMatrixByScalar / undoes multiplyMatrixByScalar', () => {
+  const matrix = [
+    [0.1, -0.2],
+    [0.3, 0.4],
+  ]
+
+  assertEquals(divideMatrixByScalar(multiplyMatrixByScalar(matrix, 7), 7), matrix)
+})
+
+Deno.test('divideMatrixByScalar / throws on a zero divisor', () => {
+  // Rejected up front: a silent divide would fill the whole gradient with
+  // Infinity/NaN and the weights with them on the next step.
+  assertThrows(() => divideMatrixByScalar([[1]], 0), 'Cannot divide matrix by 0')
+})
+
+Deno.test('divideMatrixByScalar / an empty matrix stays empty', () => {
+  assertEquals(divideMatrixByScalar([], 2), [])
+})
+
+Deno.test('divideVectorByScalar / divides every entry', () => {
+  assertArrayClose(divideVectorByScalar([2, -4], 2), [1, -2])
+  assertArrayClose(divideVectorByScalar([1], 4), [0.25])
+})
+
+Deno.test('divideVectorByScalar / undoes multiplyVectorByScalar', () => {
+  const vector = [0.1, -0.2, 0.3]
+
+  assertArrayClose(
+    divideVectorByScalar(multiplyVectorByScalar(vector, 60), 60),
+    vector,
+    1e-12,
+  )
+})
+
+Deno.test('divideVectorByScalar / throws on a zero divisor', () => {
+  assertThrows(
+    () => divideVectorByScalar([1], 0),
+    'Cannot divide vector by 0',
+  )
+})
+
+Deno.test('divideVectorByScalar / an empty vector stays empty', () => {
+  assertEquals(divideVectorByScalar([], 2), [])
+})
+
+Deno.test('addVectors / sums element-wise', () => {
+  assertEquals(addVectors([1, 2, 3], [10, 20, 30]), [11, 22, 33])
+})
+
+Deno.test('addVectors / handles negative values', () => {
+  assertEquals(addVectors([1, -2], [-1, 2]), [0, 0])
+})
+
+Deno.test('addVectors / throws when the sizes differ', () => {
+  assertThrows(() => addVectors([1, 2], [1]), 'Size of left vector')
+})
+
+Deno.test('addVectors / two empty vectors yield an empty vector', () => {
+  assertEquals(addVectors([], []), [])
+})
+
+Deno.test('addVectors / does not mutate its operands', () => {
+  const left = [1, 2]
+  const right = [3, 4]
+
+  addVectors(left, right)
+
+  assertEquals(left, [1, 2])
+  assertEquals(right, [3, 4])
+})
+
+Deno.test('formatPercentageWithDecimalPlaces / rounds to the requested precision', () => {
+  // The value is a ratio, so the output is a percentage with the requested
+  // number of decimal places.
+  assertClose(formatPercentageWithDecimalPlaces(0.985678, 2), 98.57, 1e-9)
+  assertClose(formatPercentageWithDecimalPlaces(0.5, 2), 50, 1e-9)
+  assertClose(formatPercentageWithDecimalPlaces(1, 2), 100, 1e-9)
+})
+
+Deno.test('formatPercentageWithDecimalPlaces / zero decimal places rounds to whole percent', () => {
+  assertClose(formatPercentageWithDecimalPlaces(0.985678, 0), 99, 1e-9)
+})
+
+Deno.test('formatPercentageWithDecimalPlaces / leaves an already exact value alone', () => {
+  assertClose(formatPercentageWithDecimalPlaces(0.5, 2), 50, 1e-9)
+  assertClose(formatPercentageWithDecimalPlaces(0, 2), 0, 1e-9)
+})
+
+Deno.test('formatPercentageWithDecimalPlaces / rounds the halfway case up', () => {
+  // Math.round is the rounding rule: 0.125 -> 12.5 -> 13.
+  assertClose(formatPercentageWithDecimalPlaces(0.125, 1), 12.5, 1e-9)
+  assertClose(formatPercentageWithDecimalPlaces(0.126, 1), 12.6, 1e-9)
+  assertClose(formatPercentageWithDecimalPlaces(0.124, 1), 12.4, 1e-9)
 })

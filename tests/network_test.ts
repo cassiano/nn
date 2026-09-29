@@ -9,6 +9,8 @@ import {
 } from './test_helpers.ts'
 import { Network } from '../network.ts'
 import { Layer } from '../layer.ts'
+import { Gradient } from '../types.ts'
+import { BATCH_SIZE } from '../constants.ts'
 import { MNIST_IMAGE_COLS, MNIST_IMAGE_ROWS, MNIST_OUTPUT_SIZE } from '../mnist_loader.ts'
 
 /**
@@ -304,5 +306,377 @@ Deno.test('Network / calculateGradient throws when a layer has no activation', (
   assertThrows(
     () => withoutHidden.calculateGradient(),
     'Expected activation function to be defined',
+  )
+})
+
+/**
+ * Builds a gradient whose every entry holds `value`, one entry per trainable
+ * layer in the order `calculateGradient` produces (output layer first). Used to
+ * probe how much weight each sample in a batch actually receives, where a
+ * hand-built probe is easier to reason about than a real gradient.
+ */
+function uniformGradient(net: Network, value: number): Gradient {
+  return net.layers.slice(1).map(layer => ({
+    𝓁: layer.𝓁,
+    w: layer.w.map(row => row.map(() => value)),
+    b: layer.b.map(() => value),
+  }))
+}
+
+Deno.test('Network / calculateAverageGradient throws on an empty collection', () => {
+  const net = makeStandardNetwork()
+
+  // An empty batch has no size to divide by, so it is rejected up front rather
+  // than producing a mean of NaN.
+  assertThrows(
+    () => net.calculateAverageGradient([]),
+    'Cannot calculate average gradient (empty collection)',
+  )
+})
+
+Deno.test('Network / calculateAverageGradient keeps every trainable layer', () => {
+  // Regression guard: the loop once ran 1..𝐋-1 over the gradient's entries,
+  // which silently dropped the last one. Because calculateGradient orders layers
+  // output first, that dropped Hidden Layer 1, holding 12544 of 13002
+  // parameters, so it was never trained at all.
+  const net = makeStandardNetwork()
+  net.loadSample(new Array(784).fill(0.5), 3)
+  net.feedForward()
+
+  const perSample = net.calculateGradient()
+  const average = net.calculateAverageGradient([perSample, perSample])
+
+  assertEquals(average.length, perSample.length)
+  assertEquals(
+    average.map(entry => entry.𝓁).sort((a, b) => a - b),
+    perSample.map(entry => entry.𝓁).sort((a, b) => a - b),
+  )
+  assert(average.some(entry => entry.𝓁 === 1), 'layer 1 must survive averaging')
+})
+
+Deno.test('Network / calculateAverageGradient matches a real batch mean', () => {
+  // Compares against an independent, obviously-correct mean over the same batch.
+  const net = makeStandardNetwork()
+
+  const batch = [0, 1, 2, 3].map(i => {
+    net.loadSample(new Array(784).fill(i / 4), i)
+    net.feedForward()
+    return net.calculateGradient()
+  })
+
+  const average = net.calculateAverageGradient(batch)
+
+  for (const { 𝓁, w, b } of average) {
+    const entries = batch.map(g => g.find(e => e.𝓁 === 𝓁)!)
+
+    for (let r = 0; r < w.length; r++)
+      for (let c = 0; c < w[r].length; c++)
+        assertClose(
+          w[r][c],
+          entries.reduce((sum, e) => sum + e.w[r][c], 0) / batch.length,
+          1e-12,
+        )
+
+    for (let r = 0; r < b.length; r++)
+      assertClose(
+        b[r],
+        entries.reduce((sum, e) => sum + e.b[r], 0) / batch.length,
+        1e-12,
+      )
+  }
+})
+
+Deno.test('Network / calculateAverageGradient weights every sample equally', () => {
+  // Regression guard: the sum used to be seeded with gradients[0] *and* then add
+  // gradients[0] again, giving the first sample double weight and inflating the
+  // whole batch by (1 + 1/n). Probing one sample at a time exposes the weight
+  // each one actually receives.
+  const net = makeStandardNetwork()
+
+  // A batch of n samples where only sample k is non-zero, so the averaged value
+  // is exactly that sample's weight.
+  for (const n of [1, 2, 5, 60]) {
+    const weightOf = (k: number) =>
+      net.calculateAverageGradient(
+        Array.from({ length: n }, (_, i) => uniformGradient(net, i === k ? 1 : 0)),
+      )[0].w[0][0]
+
+    for (let k = 0; k < n; k++) assertClose(weightOf(k), 1 / n, 1e-12)
+  }
+})
+
+Deno.test('Network / calculateAverageGradient does not depend on sample order', () => {
+  // The mean is a sum, so handing over the same samples in reverse order has to
+  // produce the same numbers, layer for layer.
+  const net = makeStandardNetwork()
+
+  const build = (): Gradient[] => {
+    const batch = [0, 1, 2].map(i => {
+      net.loadSample(new Array(784).fill(i / 3), i)
+      net.feedForward()
+      return net.calculateGradient()
+    })
+    net.loadSample(new Array(784).fill(0.5), 0) // leave the sample loaded
+    return batch
+  }
+
+  const forward = net.calculateAverageGradient(build())
+  const reversed = net.calculateAverageGradient(build().reverse())
+
+  for (const { 𝓁, w, b } of forward) {
+    const match = reversed.find(e => e.𝓁 === 𝓁)!
+    for (let r = 0; r < w.length; r++)
+      for (let c = 0; c < w[r].length; c++)
+        assertClose(match.w[r][c], w[r][c], 1e-12)
+    for (let r = 0; r < b.length; r++) assertClose(match.b[r], b[r], 1e-12)
+  }
+})
+
+Deno.test('Network / calculateAverageGradient leaves the batch untouched', () => {
+  // The accumulator starts from a freshly zero-filled matrix/vector, so no
+  // sample's arrays are written to, and the layers' δ survive averaging too.
+  const net = makeStandardNetwork()
+
+  const batch = [0, 1, 2].map(i => {
+    net.loadSample(new Array(784).fill(i / 3), i)
+    net.feedForward()
+    return net.calculateGradient()
+  })
+
+  const snapshot = JSON.stringify(batch)
+  const δSnapshot = net.layers.slice(1).map(layer => JSON.stringify(layer.δ))
+
+  net.calculateAverageGradient(batch)
+
+  assertEquals(JSON.stringify(batch), snapshot)
+  assertEquals(net.layers.slice(1).map(layer => JSON.stringify(layer.δ)), δSnapshot)
+})
+
+Deno.test('Network / calculateAverageGradient rejects a batch that mixes layers', () => {
+  // Entries are paired by position, so a sample listing its layers in a
+  // different order would otherwise have its layers averaged into the wrong
+  // slots. The 𝓁 check turns that silent corruption into an error.
+  const net = makeStandardNetwork()
+  net.loadSample(new Array(784).fill(0.5), 3)
+  net.feedForward()
+
+  const perSample = net.calculateGradient()
+  const shuffled: Gradient = [...perSample].reverse()
+
+  assertThrows(
+    () => net.calculateAverageGradient([perSample, shuffled]),
+    'Mixing distinct 𝓁 values',
+  )
+})
+
+Deno.test('Network / calculateAverageGradient throws when a sample is missing a layer', () => {
+  const net = makeStandardNetwork()
+  net.loadSample(new Array(784).fill(0.5), 3)
+  net.feedForward()
+
+  const perSample = net.calculateGradient()
+  // A sample that reports only the output layer. The loop is sized by the
+  // network rather than by the batch, so the short sample is never noticed as
+  // such: entry 1 is read off the end of the array and the dereference throws.
+  // Documented current behaviour, not a desirable one.
+  const truncated: Gradient = [perSample[0]]
+
+  assertThrows(
+    () => net.calculateAverageGradient([perSample, truncated]),
+    'undefined',
+  )
+})
+
+Deno.test('Network / backPropagate steps the weights against the gradient', () => {
+  // Exact arithmetic: the update is w -= η·BATCH_SIZE·∂C/∂w, with the BATCH_SIZE
+  // factor cancelling the 1/BATCH_SIZE that calculateAverageGradient divides by.
+  const net = makeTinyNetwork()
+  const [input, hidden, output] = net.layers
+  input.a = [0.5, 0.9]
+  hidden.w = [[0.7, -0.2], [0.1, 0.4]]
+  hidden.b = [0.1, -0.3]
+  output.w = [[1, 0.5], [-0.5, 2]]
+  output.b = [0.2, -0.1]
+
+  const gradient: Gradient = [
+    { 𝓁: 2, w: [[1, 2], [3, 4]], b: [5, 6] },
+    { 𝓁: 1, w: [[7, 8], [9, 10]], b: [11, 12] },
+  ]
+
+  net.backPropagate(gradient)
+
+  const rate = net.η * BATCH_SIZE
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      assertClose(
+        output.w[r][c],
+        [[1, 0.5], [-0.5, 2]][r][c] - rate * gradient[0].w[r][c],
+        1e-12,
+      )
+      assertClose(
+        hidden.w[r][c],
+        [[0.7, -0.2], [0.1, 0.4]][r][c] - rate * gradient[1].w[r][c],
+        1e-12,
+      )
+    }
+  }
+  assertClose(output.b[0], 0.2 - rate * 5, 1e-12)
+  assertClose(output.b[1], -0.1 - rate * 6, 1e-12)
+  assertClose(hidden.b[0], 0.1 - rate * 11, 1e-12)
+  assertClose(hidden.b[1], -0.3 - rate * 12, 1e-12)
+})
+
+Deno.test('Network / backPropagate applies entries by their 𝓁, not their position', () => {
+  // calculateGradient emits the output layer first, but the update is addressed
+  // by 𝓁, so a reordered gradient must still land on the right layers.
+  const net = makeTinyNetwork()
+  const [input, hidden, output] = net.layers
+  input.a = [0.5, 0.9]
+  hidden.w = [[0, 0], [0, 0]]
+  hidden.b = [0, 0]
+  output.w = [[0, 0], [0, 0]]
+  output.b = [0, 0]
+
+  const outputFirst: Gradient = [
+    { 𝓁: 2, w: [[1, 0], [0, 0]], b: [0, 0] },
+    { 𝓁: 1, w: [[0, 0], [0, 1]], b: [0, 0] },
+  ]
+
+  net.backPropagate([...outputFirst].reverse())
+
+  // Only (0,0) of the output layer and (1,1) of the hidden layer move; the
+  // entry emitted second in the reversed list must not touch the output layer.
+  assertClose(output.w[0][0], -net.η * BATCH_SIZE, 1e-12)
+  assertClose(output.w[1][0], 0, 1e-12)
+  assertClose(hidden.w[1][1], -net.η * BATCH_SIZE, 1e-12)
+  assertClose(hidden.w[0][0], 0, 1e-12)
+})
+
+Deno.test('Network / backPropagate throws for a 𝓁 that is not a layer', () => {
+  const net = makeTinyNetwork()
+  net.layers[0].a = [1, 1]
+  net.y = [1, 0]
+  net.feedForward()
+
+  const gradient: Gradient = net.calculateGradient().map(entry => ({
+    ...entry,
+    𝓁: entry.𝓁 + 10, // no such layer in a 2 -> 2 -> 2 network
+  }))
+
+  assertThrows(() => net.backPropagate(gradient), 'Layer 12 not found')
+})
+
+Deno.test('Network / backPropagate throws when a gradient shape does not fit', () => {
+  const net = makeTinyNetwork()
+  net.layers[0].a = [1, 1]
+  net.y = [1, 0]
+  net.feedForward()
+
+  const gradient = net.calculateGradient()
+  // A 3x3 weight gradient against a 2x2 weight matrix. The column counts are
+  // compared first, so that is what the error names.
+  gradient[0].w = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+  assertThrows(
+    () => net.backPropagate(gradient),
+    'must match number of columns',
+  )
+})
+
+Deno.test('Network / backPropagate reduces the cost of the current sample', () => {
+  // One real gradient step on a fixed, hand-computable network. η is scaled by
+  // 1/BATCH_SIZE so the effective step stays small, since a step of η·BATCH_SIZE
+  // would overshoot this toy network.
+  const net = makeSeededTinyNetwork()
+  net.η = 0.01 / BATCH_SIZE
+
+  const costBefore = net.cost
+  net.backPropagate(net.calculateGradient())
+  net.feedForward()
+
+  assert(net.cost < costBefore, `expected cost to fall from ${costBefore}`)
+})
+
+Deno.test('Network / a mini-batch step lowers the batch total cost', () => {
+  // The whole learning path in one go: per-sample gradients, their mean, a
+  // single update, then every sample of the same batch re-scored against the
+  // new weights. The invariant a batch update gives is on the *sum* of the
+  // batch's costs, not on each sample individually — one mean direction cannot
+  // lower every sample's cost at once, so only the total is claimed here.
+  const net = makeStandardNetwork()
+  net.η = 0.01 / BATCH_SIZE
+
+  const samples = [0, 1, 2, 3].map(i => ({
+    inputs: new Array(784).fill(i / 3),
+    label: i,
+  }))
+
+  const batchGradients = samples.map(({ inputs, label }) => {
+    net.loadSample(inputs, label)
+    net.feedForward()
+    return net.calculateGradient()
+  })
+
+  const totalCostBefore = samples.reduce((total, { inputs, label }) => {
+    net.loadSample(inputs, label)
+    net.feedForward()
+    return total + net.cost
+  }, 0)
+
+  net.backPropagate(net.calculateAverageGradient(batchGradients))
+
+  const totalCostAfter = samples.reduce((total, { inputs, label }) => {
+    net.loadSample(inputs, label)
+    net.feedForward()
+    return total + net.cost
+  }, 0)
+
+  assert(
+    totalCostAfter < totalCostBefore,
+    `expected the batch cost to fall from ${totalCostBefore}, got ${totalCostAfter}`,
+  )
+})
+
+Deno.test('Network / predictedDigit returns the largest activation index', () => {
+  const net = makeStandardNetwork()
+  net.outputLayer.a = [0, 0, 0, 0.9, 0, 0, 0.1, 0, 0, 0]
+
+  assertEquals(net.predictedDigit(), 3)
+})
+
+Deno.test('Network / predictedDigit breaks ties towards the first index', () => {
+  // findIndex returns the first match, so a flat output layer predicts 0 rather
+  // than an arbitrary digit.
+  const net = makeStandardNetwork()
+  net.outputLayer.a = new Array(MNIST_OUTPUT_SIZE).fill(0.1)
+
+  assertEquals(net.predictedDigit(), 0)
+})
+
+Deno.test('Network / previousLayer and nextLayer walk the stack', () => {
+  const net = makeStandardNetwork()
+  const [input, hidden1, hidden2, output] = net.layers
+
+  assertEquals(net.previousLayer(1), input)
+  assertEquals(net.nextLayer(1), hidden2)
+  assertEquals(net.previousLayer(2), hidden1)
+  assertEquals(net.nextLayer(2), output)
+})
+
+Deno.test('Network / previousLayer rejects the input layer', () => {
+  const net = makeStandardNetwork()
+
+  assertThrows(
+    () => net.previousLayer(0),
+    'Input layer does not have a previous one',
+  )
+})
+
+Deno.test('Network / nextLayer rejects the output layer', () => {
+  const net = makeStandardNetwork()
+
+  assertThrows(
+    () => net.nextLayer(net.𝐋),
+    'Output layer does not have a next one',
   )
 })

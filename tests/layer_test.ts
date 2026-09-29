@@ -1,4 +1,5 @@
-import { sigmoid } from '../activation.ts'
+import { sigmoid, sigmoidDerivative, reluDerivative, tanhDerivative } from '../activation.ts'
+import { ActivationFunctionType } from '../layer.ts'
 import {
   makeTinyNetwork,
   makeTinyNetworkWithoutActivation,
@@ -135,3 +136,78 @@ Deno.test(
     )
   },
 )
+
+Deno.test('Layer / σDerivativeFn returns the derivative matching σ', () => {
+  // Each activation's derivative is what turns ∂C/∂a into δ during
+  // backpropagation, so the dispatch has to follow σ.
+  const cases: Array<[ActivationFunctionType, (z: number) => number]> = [
+    ['sigmoid', sigmoidDerivative],
+    ['relu', reluDerivative],
+    ['tanh', tanhDerivative],
+  ]
+
+  for (const [σ, expected] of cases) {
+    const net = makeTinyNetwork(σ) // σ on the hidden layer
+    const layer = net.layers[1]
+
+    assertEquals(layer.σDerivativeFn(0.5), expected(0.5))
+  }
+})
+
+Deno.test('Layer / σDerivativeFn reports a constant 1 for softmax', () => {
+  // softmax has no elementwise derivative, so the output layer's δ is left as
+  // the plain ∂C/∂a and the jacobian is folded into w instead.
+  const net = makeTinyNetwork('relu', 'softmax')
+  const output = net.outputLayer
+
+  assertEquals(output.σDerivativeFn(0), 1)
+  assertEquals(output.σDerivativeFn(-7.5), 1)
+  assertEquals(output.σDerivativeFn(123), 1)
+})
+
+Deno.test('Layer / σDerivativeFn throws when σ is not configured', () => {
+  const net = makeTinyNetworkWithoutActivation()
+
+  assertThrows(
+    () => net.layers[1].σDerivativeFn,
+    'Expected activation function to be defined',
+  )
+})
+
+Deno.test('Layer / previousLayer and nextLayer resolve the neighbours', () => {
+  const net = makeTinyNetwork()
+  const [input, hidden, output] = net.layers
+
+  assertEquals(hidden.previousLayer, input)
+  assertEquals(hidden.nextLayer, output)
+})
+
+Deno.test('Layer / previousLayer throws on the input layer', () => {
+  const net = makeTinyNetwork()
+
+  assertThrows(
+    () => net.inputLayer.previousLayer,
+    'Input layer does not have a previous one',
+  )
+})
+
+Deno.test('Layer / nextLayer throws on the output layer', () => {
+  const net = makeTinyNetwork()
+
+  assertThrows(
+    () => net.outputLayer.nextLayer,
+    'Output layer does not have a next one',
+  )
+})
+
+Deno.test('Layer / isInputLayer and isOutputLayer flag the ends of the stack', () => {
+  const net = makeTinyNetwork()
+  const [input, hidden, output] = net.layers
+
+  assert(input.isInputLayer)
+  assert(!input.isOutputLayer)
+  assert(!hidden.isInputLayer)
+  assert(!hidden.isOutputLayer)
+  assert(!output.isInputLayer)
+  assert(output.isOutputLayer)
+})
