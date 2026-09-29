@@ -296,6 +296,13 @@ export class Network {
       //   ),
       //   b: [...currentLayer.δ],
       // }
+      //
+      // Proof:
+      //
+      // const a = [2, 3, 4]
+      // const b = [10, 20, 30, 40]
+      // multiplyMatrices(toMatrix(a), transposeMatrix(toMatrix(b)))                   // [ [ 20, 40, 60, 80 ], [ 30, 60, 90, 120 ], [ 40, 80, 120, 160 ] ]
+      // transposeMatrix(multiplyMatrices(toMatrix(b), transposeMatrix(toMatrix(a))))  // [ [ 20, 40, 60, 80 ], [ 30, 60, 90, 120 ], [ 40, 80, 120, 160 ] ]
 
       gradient.push(gradientlayer)
     }
