@@ -206,6 +206,14 @@ export class Network {
     return this.layers.length - 1
   }
 
+  predictedDigit() {
+    const predictedDigitProbability = Math.max(...this.outputLayer.a)
+
+    return this.outputLayer.a.findIndex(
+      value => value === predictedDigitProbability,
+    )
+  }
+
   /**
    * Computes the gradient of {@link Network.cost} with respect to every
    * trainable parameter, by the chain rule, traversing layers backwards.
@@ -314,14 +322,6 @@ export class Network {
         multiplyVectorByScalar(b, -this.η * BATCH_SIZE),
       )
     }
-  }
-
-  predictedDigit() {
-    const predictedDigitProbability = Math.max(...this.outputLayer.a)
-
-    return this.outputLayer.a.findIndex(
-      value => value === predictedDigitProbability,
-    )
   }
 
   /**
