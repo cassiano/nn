@@ -259,19 +259,23 @@ export class Network {
       )
 
       // ∂C/∂a
-      const dCostDActivation: NumericVector = currentLayer.isOutputLayer
-        ? currentLayer.a.map(
-            (activationValue, i) => 2 * (activationValue - this.y[i]),
-          )
-        : fromMatrix(
-            multiplyMatrices(
-              transposeMatrix(nextLayer!.w),
-              toMatrix(nextLayer!.δ),
-            ),
-          )
+      const costByActivationDerivatives: NumericVector =
+        currentLayer.isOutputLayer
+          ? currentLayer.a.map(
+              (activationValue, i) => 2 * (activationValue - this.y[i]),
+            )
+          : fromMatrix(
+              multiplyMatrices(
+                transposeMatrix(nextLayer!.w),
+                toMatrix(nextLayer!.δ),
+              ),
+            )
 
       // [/doc_img/network.ts/2026-09-26-18-25-14.png]
-      currentLayer.δ = hadamardProduct(dCostDActivation, σDerivatives)
+      currentLayer.δ = hadamardProduct(
+        costByActivationDerivatives,
+        σDerivatives,
+      )
 
       const gradientlayer: GradientLayer = {
         𝓁,
