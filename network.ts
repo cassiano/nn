@@ -295,18 +295,8 @@ export class Network {
       //   b: [...currentLayer.δ],
       // }
       //
-      // Proof that the multiplication can be done in any order, as long as their shapes properly align:
-      // (see corresponding test in `tests/utils_test.ts`)
-      //
-      // const a = [2, 3, 4]
-      // const b = [10, 20, 30, 40]
-      //
-      // multiplyMatrices(toMatrix(a), transposeMatrix(toMatrix(b)))
-      // -> [ [ 20, 40, 60, 80 ], [ 30, 60, 90, 120 ], [ 40, 80, 120, 160 ] ]
-      //
-      // transposeMatrix(multiplyMatrices(toMatrix(b), transposeMatrix(toMatrix(a))))
-      // -> [ [ 20, 40, 60, 80 ], [ 30, 60, 90, 120 ], [ 40, 80, 120, 160 ] ]
-
+      // For a proof that both multiplications above give the same resulting matrix, see
+      // the corresponding test in `tests/utils_test.ts`.
       gradient.push(gradientlayer)
     }
 

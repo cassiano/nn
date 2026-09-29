@@ -379,28 +379,28 @@ Deno.test('multiplyMatrices / throws when inner dimensions differ', () => {
 })
 
 Deno.test(
-  'multiplyMatrices / multiplying 2 vectors (as matrixes) can be done in any order, as long as their shapes properly align',
+  'multiplyMatrices / multiplying 2 vectors a and b (as matrixes) like [a]x[b]ᵀ and ([b]x[a]ᵀ)ᵀ gives the same resulting matrix',
   () => {
     const vectorA = [2, 3, 4]
     const vectorB = [10, 20, 30, 40]
+    const resultingMatrix = [
+      [20, 40, 60, 80],
+      [30, 60, 90, 120],
+      [40, 80, 120, 160],
+    ]
 
+    // [a]x[b]ᵀ
     assertEquals(
       multiplyMatrices(toMatrix(vectorA), transposeMatrix(toMatrix(vectorB))),
-      [
-        [20, 40, 60, 80],
-        [30, 60, 90, 120],
-        [40, 80, 120, 160],
-      ],
+      resultingMatrix,
     )
+
+    // ([b]x[a]ᵀ)ᵀ
     assertEquals(
       transposeMatrix(
         multiplyMatrices(toMatrix(vectorB), transposeMatrix(toMatrix(vectorA))),
       ),
-      [
-        [20, 40, 60, 80],
-        [30, 60, 90, 120],
-        [40, 80, 120, 160],
-      ],
+      resultingMatrix,
     )
   },
 )
