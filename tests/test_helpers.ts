@@ -1,27 +1,12 @@
 import { Network } from '../network.ts'
 import { Layer, ActivationFunctionType } from '../layer.ts'
 
-/**
- * Resets the static `Layer.id` counter so that layer indices (𝓁) are
- * deterministic within a test. Call before building any network.
- *
- * @returns Nothing.
- */
+/** Resets the static `Layer.id` counter, so layer indices (𝓁) are deterministic. */
 export function resetLayerCounter(): void {
   Layer.id = 0
 }
 
-/**
- * Builds the standard MNIST-sized network (784 -> 16 -> 16 -> 10) through the
- * real constructor, exercising its size validation and weight initialization.
- *
- * Weights and biases are randomized, so tests needing concrete values must
- * overwrite them afterwards.
- *
- * @returns A fresh network with a reset layer counter and η = 0.01.
- * @throws Never in practice, since the topology always satisfies the MNIST
- * size validation.
- */
+/** The standard MNIST-sized network (784 -> 16 -> 16 -> 10), with random weights. */
 export function makeStandardNetwork(): Network {
   resetLayerCounter()
   return new Network(
@@ -36,15 +21,8 @@ export function makeStandardNetwork(): Network {
 }
 
 /**
- * Builds a small 2 -> 2 -> 2 network by bypassing the MNIST-specific
- * constructor validation (which requires 784 inputs / 10 outputs), so tests
- * can hand-verify the math on tiny, concrete numbers.
- *
- * @param σHidden Activation for the hidden layer; defaults to 'sigmoid'.
- * @param σOutput Activation for the output layer; defaults to 'sigmoid'. Use
- * 'softmax' to test probability-shaped outputs.
- * @returns A fresh network with a reset layer counter, η = 0.01, and randomly
- * initialized weights. The input layer has no σ, as expected.
+ * A small 2 -> 2 -> 2 network, built without the constructor's MNIST size
+ * validation so tests can hand-verify the math on concrete numbers.
  */
 export function makeTinyNetwork(
   σHidden: ActivationFunctionType = 'sigmoid',
@@ -63,16 +41,7 @@ export function makeTinyNetwork(
   return network
 }
 
-/**
- * Builds a tiny 2 -> 2 -> 2 network whose hidden layer has no activation
- * function configured (σ omitted), for exercising the "activation required"
- * error paths.
- *
- * @param σOutput Activation for the output layer; defaults to 'sigmoid'. Pass
- * `undefined` to leave the output layer without σ as well.
- * @returns A fresh network with a reset layer counter and η = 0.01. Calling
- * `feedForward()` on it throws, since the hidden layer has no σ.
- */
+/** A tiny network whose hidden layer has no σ, for the "activation required" paths. */
 export function makeTinyNetworkWithoutActivation(
   σOutput: ActivationFunctionType | undefined = 'sigmoid',
 ): Network {
@@ -89,16 +58,7 @@ export function makeTinyNetworkWithoutActivation(
   return network
 }
 
-/**
- * Asserts a truthy condition, throwing with `message` otherwise.
- *
- * @param condition The value to check for truthiness.
- * @param message Text to include in the error when the check fails. Defaults
- * to 'Assertion failed'.
- * @returns Nothing; acts as a TypeScript assertion function, so the compiler
- * treats `condition` as truthy afterwards.
- * @throws Error If `condition` is falsy.
- */
+/** Asserts a truthy condition, throwing `message` otherwise. */
 export function assert(
   condition: unknown,
   message = 'Assertion failed',
@@ -106,19 +66,7 @@ export function assert(
   if (!condition) throw new Error(message)
 }
 
-/**
- * Asserts deep equality between two values (numbers, strings, nested arrays
- * and plain objects).
- *
- * @param actual The value produced by the code under test.
- * @param expected The value it should equal. Compared structurally, so key
- * order in objects is irrelevant.
- * @param message Optional prefix for the failure message, identifying the test.
- * @returns Nothing.
- * @throws Error If the two values are not deeply equal. Arrays are compared
- * element-wise and must have equal length; objects are compared by own
- * enumerable keys and must have the same number of them.
- */
+/** Asserts deep equality, comparing arrays element-wise and objects by key. */
 export function assertEquals(
   actual: unknown,
   expected: unknown,
@@ -134,20 +82,8 @@ export function assertEquals(
 
 /**
  * Asserts that `actual` is within `eps` of `expected`, for float comparisons.
- *
- * Rejects non-finite `actual` outright, because NaN silently satisfies a naive
- * `Math.abs(actual - expected) > eps` check: the difference is NaN, and every
- * comparison against NaN is false. Without this guard a test handed a
- * non-numeric value would pass vacuously.
- *
- * @param actual The computed value.
- * @param expected The reference value.
- * @param eps Maximum allowed absolute difference; defaults to 1e-9, which is
- * tight enough for the hand-computed expectations used in these tests.
- * @param message Optional prefix for the failure message.
- * @returns Nothing.
- * @throws Error If `actual` is not a finite number, or if the absolute
- * difference exceeds `eps`.
+ * A non-finite `actual` is rejected, since it would pass the comparison
+ * vacuously.
  */
 export function assertClose(
   actual: number,
@@ -166,18 +102,7 @@ export function assertClose(
     )
 }
 
-/**
- * Asserts element-wise closeness of two numeric arrays.
- *
- * @param actual The computed vector.
- * @param expected The reference vector; must have the same length as `actual`.
- * @param eps Maximum allowed absolute difference per element; defaults to 1e-9.
- * @param message Optional prefix for the failure message.
- * @returns Nothing.
- * @throws Error If the lengths differ, or if any element is further than `eps`
- * from its counterpart. The length check happens first, so a mismatch never
- * compares entries past the shorter array.
- */
+/** Asserts that two numeric arrays are element-wise within `eps`. */
 export function assertArrayClose(
   actual: number[],
   expected: number[],
@@ -193,15 +118,8 @@ export function assertArrayClose(
 }
 
 /**
- * Asserts that `fn` throws, and that the error message contains / matches `match`.
- *
- * @param fn The function expected to throw. It is invoked once.
- * @param match A substring the message must contain, or a RegExp tested against
- * it. Matching on the message keeps assertions loose enough to survive
- * rewording while still pinning the failure cause.
- * @returns Nothing.
- * @throws Error If `fn` completes without throwing, or if the message it threw
- * does not match. A non-Error throw is stringified before matching.
+ * Asserts that `fn` throws, and that the message contains `match` (a substring
+ * or RegExp).
  */
 export function assertThrows(fn: () => void, match: string | RegExp): void {
   try {
@@ -218,15 +136,7 @@ export function assertThrows(fn: () => void, match: string | RegExp): void {
   throw new Error('Expected function to throw, but it completed')
 }
 
-/**
- * Structural equality used by {@link assertEquals}: identical primitives, or
- * arrays/objects compared element-wise by own keys.
- *
- * @param actual The value produced by the code under test.
- * @param expected The value it should equal.
- * @returns Whether the two values are structurally equal. `Object.is` handles
- * the primitives first, so `NaN` equals `NaN` and `+0` does not equal `-0`.
- */
+/** Structural equality behind {@link assertEquals}, recursing into arrays and objects. */
 function deepEqual(actual: unknown, expected: unknown): boolean {
   if (Object.is(actual, expected)) return true
   if (typeof actual !== typeof expected) return false
@@ -251,14 +161,7 @@ function deepEqual(actual: unknown, expected: unknown): boolean {
   return false
 }
 
-/**
- * Renders a value for an assertion failure message.
- *
- * @param value The value to render; any type.
- * @returns Its JSON representation, or `String(value)` when JSON.stringify
- * returns undefined (e.g. for `undefined` or a function), so the message never
- * reads "undefined" without explanation.
- */
+/** Renders a value for a failure message, falling back to `String(value)`. */
 function fmt(value: unknown): string {
   return JSON.stringify(value) ?? String(value)
 }

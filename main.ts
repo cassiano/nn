@@ -21,33 +21,14 @@ let network: Network
 let loader: MnistLoader
 
 /**
- * Entry point: loads MNIST, builds the network described by
- * {@link NETWORK_LAYER_CONFIG} (784 -> 16 -> 16 -> 10), trains it for
- * {@link EPOCHS} epochs of mini-batch gradient descent, then scores the result
- * on the test split.
+ * Entry point: loads MNIST, builds the network from
+ * {@link NETWORK_LAYER_CONFIG}, trains it with mini-batch gradient descent for
+ * {@link EPOCHS} epochs, then scores it on the test split.
  *
- * Training is a double loop over epochs and batches of {@link BATCH_SIZE}
- * samples. Each epoch reshuffles the sample order, so every epoch sees the data
- * in a different order. Only one sample is loaded into the network at a time, so
- * each batch is accumulated first: per sample {@link Network.loadSample} →
- * {@link Network.feedForward} → {@link Network.calculateGradient}, then
- * {@link Network.calculateAverageGradient} turns the batch into one mean
- * gradient and a single {@link Network.backPropagate} applies it. Only whole
- * batches are trained, so `inputs.length % BATCH_SIZE` trailing samples are
- * dropped each epoch.
- *
- * While training, each batch is predicted on the fly and reported in place: the
- * cost of its last sample, a running average of the cost over every batch so
- * far, the running hit/miss counts and the accuracy so far in this epoch.
- * Those numbers describe the weights as they were *before* the batch's update,
- * so the last line of the last epoch is the honest one.
- *
- * Afterwards, each test image is run through the network on its own, logging
- * every 1000th image, and a final summary reports the overall test accuracy.
- *
- * @returns Nothing. Resolves once every test sample has been scored.
- * @throws If the dataset files are missing or malformed, or if the topology
- * fails the MNIST size validation.
+ * Each epoch reshuffles the samples and walks whole batches of
+ * {@link BATCH_SIZE}: the gradients of the batch are collected, averaged and
+ * applied in one step, so the numbers logged for a batch describe the weights
+ * as they were *before* that step.
  */
 const main = async () => {
   // Load the MNIST dataset from the zipped IDX files in ./data/mnist.

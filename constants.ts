@@ -1,25 +1,18 @@
-// Central place for project-wide constants shared across modules.
-//
-// Dataset constants (MNIST magic numbers, image dimensions, file paths) live
-// alongside their loader in mnist_loader.ts. Add any other global numeric or
-// string constants here as the project grows.
+// Project-wide constants shared across modules. Dataset-specific values (IDX
+// magic numbers, image dimensions, file paths) live next to the loader in
+// mnist_loader.ts.
 
 import { InitialLayerData } from './types.ts'
 
-// 784 pixels                           784 x 16 = 12544 weights
-//   -> 16 (relu)       -> 16 (relu)    16  x 16 =   256 weights
-//     -> 10 (softmax)                  16  x 10 =   160 weights
-//
-// 12960 weights + 42 biases (for a total of 13002 parameters).
+// Architecture, in feedforward order: 784 inputs, two 16-neuron hidden layers,
+// 10 outputs — 12960 weights and 42 biases, 13002 parameters in total.
 export const NETWORK_LAYER_CONFIG: InitialLayerData[] = [
-  { name: 'Input Layer', size: 784 }, // MNIST_IMAGE_COLS * MNIST_IMAGE_ROWS
+  { name: 'Input Layer', size: 784 },
   { name: 'Hidden Layer 1', size: 16, σ: 'relu' },
   { name: 'Hidden Layer 2', size: 16, σ: 'relu' },
-  { name: 'Output Layer', size: 10, σ: 'softmax' }, // One neuron per digit (0-9)
+  { name: 'Output Layer', size: 10, σ: 'softmax' },
 ]
 
-// η = learning rate
-export const NETWORK_LEARNING_RATE = 0.002
-
 export const EPOCHS = 5
+export const NETWORK_LEARNING_RATE = 0.002 // η, the learning rate
 export const BATCH_SIZE = 60

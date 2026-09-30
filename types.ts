@@ -1,23 +1,15 @@
 import { ActivationFunctionType } from './layer.ts'
 
-/**
- * A 2D array of numbers.
- * Used for weight matrices (w), as `[size][previous layer size]`, and for
- * batched training inputs.
- */
+/** A 2D array of numbers, shaped like the weight matrices (w) and the batch. */
 export type NumericMatrix = number[][]
 
-/**
- * A 1D array of numbers.
- * Used for activations (a), pre-activations (z), biases (b), one-hot label
- * vectors (y) and flattened images (784 pixel values).
- */
+/** A 1D array of numbers: activations (a), pre-activations (z), biases (b), labels (y), images. */
 export type NumericVector = number[]
 
 /**
- * Training dataset containing input features and corresponding labels.
- * @property inputs - 2D array where each row is a flattened image (784 values)
- * @property labels - 1D array of digit labels (0-9)
+ * A dataset of images and their digit labels.
+ * @property inputs - one flattened image per row
+ * @property labels - the digit each image depicts
  */
 export type TrainingData = {
   inputs: NumericMatrix
@@ -25,43 +17,33 @@ export type TrainingData = {
 }
 
 /**
- * High-level description of a layer passed to the Network constructor.
- * `size` is the number of neurons; `σ` (optional) is the activation function
- * applied to that layer. The input layer omits σ since it has no weights.
- * @property name - Human-readable label, used only for debugging output
- * @property size - Number of neurons in the layer
- * @property σ - Activation function applied to this layer's pre-activations.
- * Omitted for the input layer, which applies no activation.
+ * A layer described up front, before the network exists. The input layer omits
+ * σ, having no activation to apply.
+ * @property name - human-readable label, used only in debug output
+ * @property size - number of neurons
+ * @property σ - activation function applied to this layer's pre-activations
  */
 export type InitialLayerData = {
   name: string
   size: number
-  σ?: ActivationFunctionType // Activation function (greek letter sigma)
+  σ?: ActivationFunctionType
 }
 
 /**
- * The gradient of the cost function with respect to one layer's parameters,
- * shaped like the parameters themselves so it can be applied directly.
- * @property 𝓁 - Index of the layer these partials belong to (1-based; 0 is the
- * input layer, which has no parameters and therefore no gradient)
- * @property w - ∂C/∂w(𝓁), a [size][previous layer size] matrix laid out in the
- * same row/column order as the layer's own weight matrix
- * @property b - ∂C/∂b(𝓁), a [size] vector aligned with the layer's biases
+ * How the cost changes with one layer's parameters, shaped like the parameters
+ * themselves so it can be applied to them directly.
+ * @property 𝓁 - the layer's index (1-based; the input layer has no parameters)
+ * @property w - ∂C/∂w(𝓁)
+ * @property b - ∂C/∂b(𝓁)
  */
 export type GradientLayer = {
-  𝓁: number // [1..𝐋]
+  𝓁: number
   w: NumericMatrix
   b: NumericVector
 }
 
 /**
- * Every trainable layer's {@link GradientLayer}, ordered from the output layer
- * (𝓁 = 𝐋) backwards to the first hidden layer (𝓁 = 1), matching the order in
- * which {@link Network.calculateGradient} walks the layers.
- *
- * One entry per layer that has parameters, so its length is the number of
- * trainable layers (the output layer's index, 𝐋) rather than the number of
- * parameters. {@link Network.calculateAverageGradient} relies on that fixed
- * length and order when it pairs up a batch.
+ * The gradient of every trainable layer, in the order
+ * {@link Network.calculateGradient} produces them: output layer first.
  */
 export type Gradient = GradientLayer[]

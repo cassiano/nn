@@ -1,26 +1,11 @@
 import { NumericMatrix, NumericVector, Gradient } from './types.ts'
 
 /**
- * Re-maps a `value` from the range [lower, higher] to the range
- * [projectedLower, projectedUpper]. Optionally clamps the output to the target
- * range when `withinBounds` is true (any input outside the source range is
- * snapped to the nearest endpoint). Used e.g. to turn a pixel brightness in
- * [0, 1] into an index into a Unicode character gradient.
+ * Re-maps a value from one range onto another by linear interpolation, e.g. a
+ * pixel brightness in [0, 1] onto an index into a Unicode character gradient.
  *
- * @param value The number to re-map.
- * @param lower Inclusive lower bound of the source range.
- * @param higher Inclusive upper bound of the source range. May be below
- * `lower`, which describes a descending source range.
- * @param projectedLower Value that `lower` maps to.
- * @param projectedUpper Value that `higher` maps to. May be below
- * `projectedLower`, which describes a descending target range.
- * @param withinBounds When true (default false), values outside the source
- * range snap to the nearest projected endpoint instead of extrapolating. Also
- * avoids a division by zero when `lower` equals `higher`, since the guard
- * returns before the interpolation runs.
- * @returns The re-mapped value, or a projected endpoint when clamped.
- * @returns NaN or ±Infinity when `lower` equals `higher` and `withinBounds` is
- * false, since the interpolation divides by a zero-width range.
+ * @param withinBounds Clamps values outside the source range to the nearest
+ * projected endpoint instead of extrapolating.
  */
 export const map = (
   value: number,
@@ -30,7 +15,6 @@ export const map = (
   projectedUpper: number,
   withinBounds = false,
 ) => {
-  // Clamp input when withinBounds is set. Handles inverted source ranges too.
   if (withinBounds) {
     if (lower <= higher) {
       if (value <= lower) return projectedLower
@@ -49,29 +33,12 @@ export const map = (
   )
 }
 
-/**
- * Executes `fn` once for each index in [0, count). The array-free equivalent
- * of `for (let i = 0; i < count; i++)`, when you don't need a return value.
- *
- * @param count How many times to invoke `fn`. Values below 1 mean `fn` is
- * never called.
- * @param fn Called with each index in ascending order, from 0 to `count - 1`.
- * @returns Nothing.
- */
+/** Runs `fn` once for each index in [0, count), when no return value is needed. */
 export const timesForEach = (count: number, fn: (i: number) => void) => {
   for (let i = 0; i < count; i++) fn(i)
 }
 
-/**
- * Builds an array of length `count` where slot i is `fn(i)`.
- * The array-building counterpart to {@link timesForEach}.
- *
- * @param count Length of the array to build. Values below 1 produce `[]`.
- * @param fn Produces the value at each index, called with indices 0 to
- * `count - 1` in ascending order. Returning `undefined` leaves a hole in the
- * array, so the result is not guaranteed to be dense.
- * @returns An array of `count` entries, or `[]` when `count` is 0.
- */
+/** Builds an array of `count` entries where slot i is `fn(i)`. */
 export const timesMap = <T>(count: number, fn: (index: number) => T): T[] => {
   const results: T[] = []
 
@@ -81,18 +48,10 @@ export const timesMap = <T>(count: number, fn: (index: number) => T): T[] => {
 }
 
 /**
- * Reduces over the indices [0, count) via `fn`, optionally starting from
- * `initialAcc`. Without an initial value, index 0 becomes the accumulator
- * (which is why the loop starts at 1 in that case).
+ * Folds the indices [0, count) into a single value.
  *
- * @param count Number of indices to visit, from 0 to `count - 1`.
- * @param fn Combines the running accumulator with the current index and
- * returns the next accumulator.
- * @param initialAcc Starting value. When omitted, the accumulator starts at
- * `0` and the first index passed to `fn` is 1, so index 0 is never folded in;
- * `count` of 1 therefore returns the seed untouched.
- * @returns The final accumulated value, or `initialAcc` (or 0) when `count` is
- * 0 and `fn` was never called.
+ * @param initialAcc Seed to start from. Omitting it starts the accumulator at 0
+ * with the first index being 1, so index 0 is never folded in.
  */
 export const timesReduce = <T>(
   count: number,
@@ -107,15 +66,7 @@ export const timesReduce = <T>(
   return acc
 }
 
-/**
- * Iterates a collection from its last element down to the first.
- *
- * @param collection The array to walk. A copy is not made, so the callback
- * must not mutate it.
- * @param fn Called with each item and its index, starting from the last index
- * and counting down to 0.
- * @returns Nothing. Use {@link timesMap} if you need to collect results.
- */
+/** Walks a collection from its last element to its first. */
 export const reversedForEach = <T>(
   collection: T[],
   fn: (item: T, index: number) => void,
@@ -123,10 +74,7 @@ export const reversedForEach = <T>(
   for (let i = collection.length - 1; i >= 0; i--) fn(collection[i], i)
 }
 
-/**
- * Recursive type to create nested arrays based on the length of the dimensions tuple.
- * [number, number] -> T[][]
- */
+/** Maps a dimensions tuple to the positional arguments a callback receives. */
 type NestedArray<T, D extends number[]> = D extends [
   number,
   ...infer Rest extends number[],
@@ -134,24 +82,13 @@ type NestedArray<T, D extends number[]> = D extends [
   ? NestedArray<T, Rest>[]
   : T
 
-/**
- * Maps a dimensions tuple to the tuple of positional arguments its callback
- * receives, e.g. `[number, number]` -> `(row: number, col: number)`.
- */
 type ArrayAsObject<D extends number[]> = { [K in keyof D]: number }
 
 /**
- * Generates an N-dimensional array, recursing through the dimension sizes and
+ * Builds an N-dimensional array by recursing through the dimension sizes,
  * calling `callback` once per combination of indices.
  *
- * @param dimensions A tuple or array defining the size of each dimension, in
- * nesting order (outermost first). An empty array yields `[]` at runtime.
- * @param callback A function receiving all current indices and returning the
- * value stored at that position, e.g. `(row, col)` for `[2, 3]`.
- * @returns A nested array shaped by `dimensions`, with `callback`'s results at
- * the leaves.
- * @example timesMapN([2, 2], (row, col) => row * 2 + col)
- * // => [[0, 1], [2, 3]]
+ * @example timesMapN([2, 2], (row, col) => row * 2 + col) // => [[0, 1], [2, 3]]
  */
 export const timesMapN = <T, D extends number[]>(
   dimensions: [...D],
@@ -174,7 +111,6 @@ export const timesMapN = <T, D extends number[]>(
     )
   }
 
-  // Handle empty dimensions case
   if (dimensions.length === 0) return [] as NestedArray<T, D>
 
   return accumulateIndices(dimensions, [])
@@ -182,16 +118,8 @@ export const timesMapN = <T, D extends number[]>(
 
 /**
  * Visits every index combination of an N-dimensional space exactly once,
- * recursing through the dimension sizes, without building an array.
- *
- * The side-effecting counterpart to {@link timesMapN}.
- *
- * @param dimensions A tuple or array defining the size of each dimension, in
- * nesting order (outermost first). An empty array means `callback` is never
- * called.
- * @param callback A function receiving all current indices, e.g. `(row, col)`
- * for `[2, 3]`. Its return value is ignored.
- * @returns Nothing.
+ * without building an array. The side-effecting counterpart to
+ * {@link timesMapN}.
  */
 export const timesForEachN = <T, D extends number[]>(
   dimensions: [...D],
@@ -215,21 +143,14 @@ export const timesForEachN = <T, D extends number[]>(
     })
   }
 
-  // Handle empty dimensions case
   if (dimensions.length === 0) return
 
   accumulateIndices(dimensions, [])
 }
 
 /**
- * Narrows a value known to be possibly `undefined` to one that is not, throwing
- * otherwise. Acts as a TypeScript assertion function, so the compiler treats
- * `val` as `NonNullable<T> | null` afterwards. Note `null` is allowed through:
- * use {@link assertIsNotNull} to reject it.
- *
- * @param val The value to check.
- * @returns Nothing; returns normally only when `val` is not `undefined`.
- * @throws TypeError If `val` is `undefined`.
+ * Asserts a value is not `undefined`, so the compiler can narrow it afterwards.
+ * Note `null` passes: use {@link assertIsNotNull} to reject it too.
  */
 export function assertIsNotUndefined<T>(
   val: T | undefined | null,
@@ -241,14 +162,8 @@ export function assertIsNotUndefined<T>(
 }
 
 /**
- * Narrows a value known to be possibly `null` to one that is not, throwing
- * otherwise. Acts as a TypeScript assertion function, so the compiler treats
- * `val` as `NonNullable<T> | undefined` afterwards. Note `undefined` is allowed
- * through: use {@link assertIsNotUndefined} to reject it.
- *
- * @param val The value to check.
- * @returns Nothing; returns normally only when `val` is not `null`.
- * @throws TypeError If `val` is `null`.
+ * Asserts a value is not `null`, so the compiler can narrow it afterwards. Note
+ * `undefined` passes: use {@link assertIsNotUndefined} to reject it too.
  */
 export function assertIsNotNull<T>(
   val: T | undefined | null,
@@ -257,16 +172,7 @@ export function assertIsNotNull<T>(
     throw new TypeError(`Expected value not to be null, but received ${val}`)
 }
 
-/**
- * Narrows a value known to be possibly `undefined` or `null` to one that is
- * neither, throwing otherwise. Acts as a TypeScript assertion function, so the
- * compiler treats `val` as `NonNullable<T>` afterwards.
- *
- * @param val The value to check.
- * @returns Nothing; returns normally only when `val` is neither `undefined`
- * nor `null`.
- * @throws TypeError If `val` is `undefined` or `null`.
- */
+/** Asserts a value is neither `undefined` nor `null`, so the compiler can narrow it. */
 export function assertIsNotUndefinedOrNull<T>(
   val: T | undefined | null,
 ): asserts val is NonNullable<T> {
@@ -277,18 +183,9 @@ export function assertIsNotUndefinedOrNull<T>(
 }
 
 /**
- * Builds a `rows` x `cols` matrix whose entries are all the same value, or all
- * produced by the same function. Used to allocate weight matrices and to seed
- * accumulators with a zero-filled matrix, where aliasing the seed would leak
- * into the caller's data.
+ * Builds a `rows` x `cols` matrix of a repeated value, or of one value per cell
+ * from a function. Used to allocate weight matrices and zero-filled sums.
  *
- * @param rows Number of rows; values below 1 produce `[]`.
- * @param cols Number of columns per row; 0 produces one empty row per requested
- * row (`[[], []]` for `(2, 0)`), since the row count is filled in first.
- * @param initialValueOrFn Either the value to repeat in every cell, or a
- * function called once per cell (e.g. `() => random(-1, 1)`).
- * @returns A new matrix of the given shape. A function is invoked in row-major
- * order, `rows * cols` times in total.
  * @example createMatrix(2, 2, 0) // => [[0, 0], [0, 0]]
  */
 export const createMatrix = (
@@ -304,14 +201,9 @@ export const createMatrix = (
   )
 
 /**
- * Builds a vector of `size` entries, all the same value, or all produced by the
- * same function. The vector counterpart of {@link createMatrix}, used e.g. for
- * bias vectors and zero-filled accumulators.
+ * Builds a vector of a repeated value, or of one value per entry from a
+ * function. The vector counterpart of {@link createMatrix}.
  *
- * @param size Number of entries; values below 1 produce `[]`.
- * @param initialValueOrFn Either the value to repeat in every entry, or a
- * function called once per entry (e.g. `() => random(-1, 1)`).
- * @returns A new vector of the given length.
  * @example createVector(3, 0) // => [0, 0, 0]
  */
 export const createVector = (
@@ -325,38 +217,18 @@ export const createVector = (
       : () => initialValueOrFn,
   )
 
-/**
- * Converts an Nx1 column vector (a list of numbers) into an Nx1 matrix, so it
- * can participate in matrix operations.
- *
- * @param vector The values to wrap, one per row.
- * @returns A matrix with one single-element row per entry. An empty vector
- * yields `[]`.
- * @example toMatrix([1, 2, 3]) // => [[1], [2], [3]]
- */
+/** Wraps a vector as a single-column matrix, so it can join matrix operations. */
 export const toMatrix = (vector: NumericVector): NumericMatrix =>
   vector.map(value => [value])
 
-/**
- * Inverse of {@link toMatrix}: extracts the single column from an Nx1 matrix.
- *
- * @param matrix An Nx1 matrix, i.e. one single-entry row per value.
- * @returns The first entry of each row. An empty matrix yields `[]`, and rows
- * longer than one entry have their extra columns dropped.
- * @example fromMatrix([[1], [2], [3]]) // => [1, 2, 3]
- */
+/** Unpacks a single-column matrix back into a vector. */
 export const fromMatrix = (matrix: NumericMatrix): NumericVector =>
   matrix.map(row => row[0])
 
 /**
- * Element-wise addition of two matrices with identical dimensions.
+ * Element-wise matrix addition.
  *
- * @param left The matrix whose values appear in the result.
- * @param right The matrix added onto `left`; must have the same shape.
- * @returns A new matrix of the same shape holding `left[i][j] + right[i][j]`.
- * Two empty matrices yield `[]`.
- * @throws If the column counts differ, or if the column counts match but the
- * row counts do not.
+ * @throws If the two matrices do not have the same shape.
  */
 export const addMatrices = (
   left: NumericMatrix,
@@ -384,16 +256,10 @@ export const addMatrices = (
 }
 
 /**
- * Standard matrix product (rows of `left` dotted with columns of `right`).
- * Requires left.cols === right.rows. Used to compute z(𝓁) = w(𝓁)·a(𝓁-1).
+ * Standard matrix product: the rows of `left` dotted with the columns of
+ * `right`. Used to compute z(𝓁) = w(𝓁)·a(𝓁-1).
  *
- * @param left The left factor, of shape [rows][cols].
- * @param right The right factor, of shape [cols][colsRight]; its row count must
- * equal `left`'s column count.
- * @returns A new matrix of shape [left.rows][right.cols] holding the row-by-
- * column dot products. Operands are not mutated.
- * @throws If `left`'s column count differs from `right`'s row count, or if
- * either operand is empty.
+ * @throws If the operands are not inner-dimension compatible.
  */
 export const multiplyMatrices = (
   left: NumericMatrix,
@@ -426,17 +292,7 @@ export const multiplyMatrices = (
   return result
 }
 
-/**
- * Swaps a matrix's rows and columns, reflecting it along its main diagonal.
- * Used to broadcast a weight matrix across activations during backpropagation.
- *
- * @param matrix The matrix to transpose, of shape [rows][cols].
- * @returns A new matrix of shape [cols][rows] holding `matrix[i][j]` at
- * `[j][i]`. Transposing twice returns the original; operands are not mutated.
- * @throws If `matrix` is empty, since its column count is read from row 0.
- * @example
- * transposeMatrix([[1, 2, 3], [4, 5, 6]]) // => [[1, 4], [2, 5], [3, 6]]
- */
+/** Swaps a matrix's rows and columns, reflecting it along its main diagonal. */
 export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
   const cols = matrix[0].length
   const rows = matrix.length
@@ -452,12 +308,8 @@ export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
 }
 
 /**
- * Multiplies every entry of a matrix by a single scalar, used to scale a
- * gradient by the learning rate.
- *
- * @param matrix The matrix to scale, of shape [rows][cols].
- * @param scalar The factor applied to every entry; may be negative.
- * @returns A new matrix of the same shape. An empty matrix yields `[]`.
+ * Multiplies every entry of a matrix by a scalar, used to scale a gradient by
+ * the learning rate.
  */
 export const multiplyMatrixByScalar = (
   matrix: NumericMatrix,
@@ -473,14 +325,10 @@ export const multiplyMatrixByScalar = (
 }
 
 /**
- * Divides every entry of a matrix by a single scalar, used to turn a summed
- * batch gradient into its mean.
+ * Divides every entry of a matrix by a scalar, used to turn a summed batch
+ * gradient into its mean.
  *
- * @param matrix The matrix to scale, of shape [rows][cols].
- * @param scalar The divisor; must not be 0.
- * @returns A new matrix of the same shape holding `matrix[i][j] / scalar`.
- * @throws If `scalar` is 0, rather than filling the matrix with
- * Infinity/NaN.
+ * @throws If `scalar` is 0, rather than filling the matrix with Infinity/NaN.
  */
 export const divideMatrixByScalar = (
   matrix: NumericMatrix,
@@ -492,11 +340,8 @@ export const divideMatrixByScalar = (
 }
 
 /**
- * Element-wise (Hadamard) product of two equally sized vectors.
+ * Element-wise (Hadamard) product of two vectors.
  *
- * @param left The left factor.
- * @param right The right factor; must have the same length as `left`.
- * @returns A new vector holding `left[i] * right[i]`.
  * @throws If the two vectors have different lengths.
  */
 export const hadamardProduct = (
@@ -512,13 +357,9 @@ export const hadamardProduct = (
 }
 
 /**
- * Element-wise addition of two equally sized vectors, used to step a layer's
- * biases against their gradient.
+ * Element-wise vector addition, used to step a layer's biases against their
+ * gradient.
  *
- * @param left The vector whose values appear in the result.
- * @param right The vector added onto `left`; must have the same length.
- * @returns A new vector holding `left[i] + right[i]`. Operands are not
- * mutated, and two empty vectors yield `[]`.
  * @throws If the two vectors have different lengths.
  */
 export const addVectors = (
@@ -533,14 +374,7 @@ export const addVectors = (
   return left.map((leftValue, i) => leftValue + right[i])
 }
 
-/**
- * Multiplies every entry of a vector by a single scalar, used to scale a
- * gradient by the learning rate.
- *
- * @param vector The vector to scale.
- * @param scalar The factor applied to every entry; may be negative.
- * @returns A new vector of the same length. An empty vector yields `[]`.
- */
+/** Multiplies every entry of a vector by a scalar. */
 export const multiplyVectorByScalar = (
   vector: NumericVector,
   scalar: number,
@@ -549,12 +383,8 @@ export const multiplyVectorByScalar = (
 }
 
 /**
- * Divides every entry of a vector by a single scalar, the vector counterpart of
- * {@link divideMatrixByScalar}.
+ * Divides every entry of a vector by a scalar.
  *
- * @param vector The vector to scale.
- * @param scalar The divisor; must not be 0.
- * @returns A new vector of the same length holding `vector[i] / scalar`.
  * @throws If `scalar` is 0.
  */
 export const divideVectorByScalar = (
@@ -566,25 +396,12 @@ export const divideVectorByScalar = (
   return multiplyVectorByScalar(vector, 1 / scalar)
 }
 
-/**
- * Returns a random number in [min, max). Defaults to [0, 1).
- *
- * @param min Inclusive lower bound of the range; defaults to 0.
- * @param max Exclusive upper bound of the range; defaults to 1.
- * @returns A pseudo-random float in [min, max), uniform over that interval.
- */
+/** A random number in [min, max). */
 export const random = (min = 0, max = 1) => Math.random() * (max - min) + min
 
 /**
- * Fisher-Yates (Knuth) shuffle: randomizes array in-place in O(n).
- * Used to ensure each epoch sees training data in a different order.
- *
- * Mutates the array by swapping, so pass a copy if the original must survive.
- * Uniform over permutations, and never mutates `Math.random`.
- *
- * @param array The array to shuffle in place. Arrays of length 0 or 1 are left
- * untouched, as there is only one permutation.
- * @returns Nothing.
+ * Fisher-Yates shuffle, permuting the array in place, so each epoch sees the
+ * data in a different order.
  */
 export const shuffle = (array: number[]): void => {
   for (let i = array.length - 1; i > 0; i--) {
@@ -595,15 +412,9 @@ export const shuffle = (array: number[]): void => {
 }
 
 /**
- * Rounds a ratio to a fixed number of decimal places, scaled by 100, so
- * accuracies and rates read the same in every log line (a bare `0.5` vs
- * `0.55555`).
+ * Renders a ratio as a percentage rounded to a fixed precision, so accuracies
+ * read the same in every log line.
  *
- * @param value The ratio to format; a non-finite value propagates as NaN,
- * because {@link Math.round} yields NaN for it.
- * @param decimalPlaces How many digits to keep after the decimal point. Negative
- * values round to the next power of ten (0 or 100 percent).
- * @returns The rounded percentage as a number.
  * @example formatPercentageWithDecimalPlaces(0.985678, 2) // => 98.57
  */
 export const formatPercentageWithDecimalPlaces = (
@@ -613,25 +424,15 @@ export const formatPercentageWithDecimalPlaces = (
 
 /**
  * Flattens every layer of a gradient into a single vector, so all of a
- * network's trainable parameters can be handled as one list instead of one
- * layer at a time.
+ * network's parameters can be handled as one list.
  *
- * The layers are ordered by 𝓁 (first hidden layer, …, output layer) first, so
- * the result does not depend on the order they arrive in — a gradient straight
- * from {@link Network.calculateGradient} comes back from the output layer
- * downwards. Each layer contributes its weights in row-major order, then its
- * biases, and the blocks are concatenated with no padding in between.
+ * Layers are ordered by 𝓁, each contributing its weights row-major then its
+ * biases, so the result does not depend on the order they arrive in.
  *
- * @param gradient One {@link GradientLayer} per trainable layer, each carrying
- * that layer's ∂C/∂w and ∂C/∂b.
- * @returns A new vector of length equal to the total number of trainable
- * parameters, laid out as [w(1)…, b(1), w(2)…, b(2), …] in ascending 𝓁. The
- * gradient itself is left untouched (the sorting copies it), and an empty
- * gradient yields `[]`.
  * @example
  * gradientAsVector([
- *   { 𝓁: 2, w: [[4], [5]], b: [6] }, // output layer: 2 neurons, 1 input each
- *   { 𝓁: 1, w: [[1, 2]], b: [3] }, // hidden layer: 1 neuron, 2 inputs
+ *   { 𝓁: 2, w: [[4], [5]], b: [6] },
+ *   { 𝓁: 1, w: [[1, 2]], b: [3] },
  * ])
  * // => [1, 2, 3, 4, 5, 6]
  */

@@ -19,154 +19,91 @@ import {
   sigmoid,
 } from './activation.ts'
 
-/**
- * Identifies which activation function a layer applies, and therefore which
- * derivative {@link Layer.σDerivativeFn} returns.
- * - 'sigmoid': logistic, outputs (0, 1)
- * - 'relu': max(0, x), outputs [0, ∞)
- * - 'tanh': outputs (-1, 1)
- * - 'softmax': probability distribution across the layer, outputs sum to 1
- */
+/** Identifies the activation a layer applies, and so the derivative it needs during backpropagation. */
 export type ActivationFunctionType = 'sigmoid' | 'relu' | 'tanh' | 'softmax'
 
 /**
- * A single layer of a {@link Network}: a fixed-size group of neurons.
+ * One layer of a {@link Network}: a group of `size` neurons holding its
+ * parameters (w, b) and the values the passes compute from them (z, a, δ).
  *
- * Stores the layer's trainable parameters and intermediate values:
- * - w: weight matrix ([size][previous layer size]), random in (-1, 1) at init
- * - b: bias vector ([size]), random in (-1, 1) at init
- * - z: pre-activation values z(𝓁) = w(𝓁)·a(𝓁-1) + b(𝓁)
- * - a: post-activation values, obtained by applying σ to z
- * - δ: error signal δ(𝓁) = ∂C/∂a(𝓁), written only by backpropagation
- *
- * The first (input) layer is a special case: it only stores the raw inputs in
- * `a` and completely ignores w, b, z, δ and σ.
+ * The input layer is the exception: it only stores the raw inputs in `a` and
+ * has no parameters or activation.
  */
 export class Layer {
-  /**
-   * Position of this layer within its network: 0 for the input layer, up to 𝐋
-   * for the output layer. Assigned from the static {@link Layer.id} counter
-   * rather than passed in, so a network's layers get consecutive indices in
-   * construction order.
-   */
+  /** Position within the network: 0 for the input layer, up to 𝐋 for the output layer. */
   𝓁: number
 
-  /** Post-activation values a(𝓁) ([size]); the raw inputs on layer 0. */
+  /** Activations a(𝓁), the raw inputs on layer 0. */
   a: NumericVector = []
 
-  /** Weights w(𝓁) ([size][previous layer size]); empty on the input layer. */
+  /** Weights w(𝓁), shaped [size][previous layer size]. */
   w: NumericMatrix = []
 
-  /** Biases b(𝓁) ([size]); empty on the input layer. */
+  /** Biases b(𝓁), one per neuron. */
   b: NumericVector = []
 
-  /**
-   * Pre-activation values z(𝓁) ([size]), i.e. the weighted sum of the previous
-   * layer's activations plus this layer's biases, before σ is applied.
-   */
+  /** Pre-activations z(𝓁), before σ is applied. */
   z: NumericVector = []
 
-  /**
-   * Error signal δ(𝓁) ([size]) = ∂C/∂a(𝓁), how much this layer's activations
-   * contributed to the cost. Produced by
-   * {@link Network.calculateGradient} while walking layers backwards, and read
-   * by the layer after this one; empty until backpropagation runs.
-   */
+  /** Error signal δ(𝓁) = ∂C/∂a(𝓁); empty until backpropagation runs. */
   δ: NumericVector = [] // [/doc_img/layer.ts/2026-09-26-14-25-34.png]
 
-  /**
-   * Monotonic counter backing {@link Layer.𝓁}. Tests reset it (e.g. via
-   * `resetLayerCounter()`) so layer indices are deterministic.
-   */
+  /** Counts layers as they are constructed, and backs {@link Layer.𝓁}. */
   static id = 0
 
   /**
-   * Builds a layer and, unless it is the input layer, gives it randomly
-   * initialized weights and biases. A layer is expected to be constructed in
-   * feedforward order, because its index and its weight shape both depend on
-   * the layer before it.
+   * Builds a layer, randomly initializing its parameters unless it is the input
+   * layer. Layers are expected to be constructed in feedforward order, since
+   * each one needs the layer before it.
    *
-   * @param network The network this layer belongs to; used to look up
-   * {@link Layer.previousLayer} during initialization.
-   * @param name Human-readable label for this layer, used in debug output.
-   * @param size Number of neurons, i.e. the length of a, z, δ and b.
-   * @param σ Activation function (greek letter sigma) applied to z to produce
-   * a. Omit it for the input layer, which has no weights and applies no
-   * activation.
+   * @param name Human-readable label, used in debug output.
+   * @param size Number of neurons.
+   * @param σ Activation applied to z to produce a.
+   * @throws If no previous layer exists yet to size w against.
    */
   constructor(
     public network: Network,
     public name: string,
     public size: number,
-    public σ?: ActivationFunctionType, // Activation function (greek letter sigma)
+    public σ?: ActivationFunctionType,
   ) {
     this.𝓁 = Layer.id++
 
     if (!this.isInputLayer) this.initializeNetworkParameters()
   }
 
-  /**
-   * Number of learnable parameters owned by this layer: every weight plus
-   * every bias. The input layer reports 0, since it has none.
-   */
+  /** How many parameters this layer owns: its weights plus its biases. */
   get parameterCount() {
     return this.isInputLayer
       ? 0
       : this.w.length * this.w[0].length + this.b.length
   }
 
-  /**
-   * The layer whose activations feed into this one, i.e. the network's layer at
-   * index `𝓁 - 1`.
-   *
-   * @throws If this is the input layer, which has no predecessor.
-   */
+  /** The layer feeding into this one. */
   get previousLayer() {
     return this.network.previousLayer(this.𝓁)
   }
 
-  /**
-   * The layer fed by this one, i.e. the network's layer at index `𝓁 + 1`.
-   * Backpropagation walks backwards through these links, reading each layer's
-   * w and δ to pull the error signal one step further from the output.
-   *
-   * @returns The layer at index `𝓁 + 1`.
-   * @throws If this is the output layer, which has no successor.
-   */
+  /** The layer fed by this one, which backpropagation uses to carry δ further back. */
   get nextLayer() {
     return this.network.nextLayer(this.𝓁)
   }
 
-  /**
-   * Whether this layer is the network's first one, i.e. index 0, which only
-   * holds the sample's raw inputs and has no weights, biases or activation.
-   *
-   * @returns True if {@link Layer.𝓁} is 0.
-   */
+  /** Whether this is the network's first layer. */
   get isInputLayer() {
     return this.𝓁 === 0
   }
 
-  /**
-   * Whether this layer is the network's last one, i.e. index
-   * {@link Network.𝐋}, whose activations are the network's prediction. This is
-   * the layer whose activations {@link Network.cost} compares against the
-   * target, and where the error signal δ starts.
-   *
-   * @returns True if {@link Layer.𝓁} equals the network's output index.
-   */
+  /** Whether this is the network's last layer, whose activations are the prediction. */
   get isOutputLayer() {
     return this.𝓁 === this.network.𝐋
   }
 
   /**
-   * Recomputes this layer's activations from its incoming values: first
-   * {@link Layer.z} from the previous layer's `a` and this layer's parameters,
-   * then `a` by applying σ to z. Together these are the two halves of the
-   * layer's forward pass.
+   * Recomputes this layer's activations from its inputs: z from the previous
+   * layer, then a by applying σ.
    *
-   * @throws If σ is not configured, or if the dimensions of w, b and the
-   * previous layer's `a` do not line up.
+   * @throws If σ is missing, or if the incoming dimensions do not line up.
    */
   calculatePostActivationValues() {
     this.calculatePreActivationValues()
@@ -174,13 +111,10 @@ export class Layer {
   }
 
   /**
-   * The derivative σ' of this layer's activation function, as a function of
-   * the pre-activation z. Needed during backpropagation to turn ∂C/∂a into
-   * δ(𝓁) = ∂C/∂a · σ'(z(𝓁)).
+   * The derivative σ' of this layer's activation, as a function of z, used to
+   * build δ. Softmax reports a constant 1, leaving δ as the plain ∂C/∂a.
    *
-   * @returns The matching derivative function, except for 'softmax', which
-   * returns a constant 1 so that δ stays the unweighted ∂C/∂a.
-   * @throws If σ is not configured.
+   * @throws If σ is missing.
    */
   get σDerivativeFn() {
     if (this.σ === undefined)
@@ -202,14 +136,7 @@ export class Layer {
     }
   }
 
-  /**
-   * Fills w and b with random values in (-1, 1), giving the network a
-   * non-symmetric starting point. Skipped for the input layer, which has no
-   * incoming connections. Called only from the constructor.
-   *
-   * @throws If the previous layer has not been created yet, since w's shape is
-   * derived from its size.
-   */
+  /** Gives the layer a random, non-symmetric starting point. */
   private initializeNetworkParameters() {
     this.w = createMatrix(this.size, this.previousLayer.size, () =>
       random(-1, 1),
@@ -218,14 +145,9 @@ export class Layer {
   }
 
   /**
-   * Computes the pre-activations z(𝓁) = w(𝓁)·a(𝓁-1) + b(𝓁) and stores them in
-   * `z`. The matrix helpers convert between the column/row shapes involved: the
-   * previous layer's vector becomes an Nx1 matrix, the product is folded back
-   * into a single column, and the bias vector is broadcast by adding one row
-   * per bias.
+   * Computes z(𝓁) = w(𝓁)·a(𝓁-1) + b(𝓁).
    *
-   * @throws If w's columns, the previous layer's `a` length and b's length
-   * disagree, or if the input layer calls this (it has no parameters).
+   * @throws If w, b and the previous layer's `a` disagree on their dimensions.
    */
   private calculatePreActivationValues() {
     // z(𝓁) = w(𝓁) * a(𝓁-1) + b(𝓁)
@@ -238,12 +160,9 @@ export class Layer {
   }
 
   /**
-   * Applies σ to every entry of `z` and stores the result in `a`. Dispatches
-   * on {@link Layer.σ}; the activation functions all apply element-wise except
-   * 'softmax', which normalizes across the whole vector so its outputs sum
-   * to 1.
+   * Applies σ to z, storing the result in a.
    *
-   * @throws If σ is not configured.
+   * @throws If σ is missing.
    */
   private applyActivationFunction() {
     if (this.σ === undefined)
