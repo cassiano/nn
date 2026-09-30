@@ -17,7 +17,12 @@ import {
   Gradient,
 } from './types.ts'
 import { Layer } from './layer.ts'
-import { hadamardProduct, createVector, divideMatrixByScalar } from './utils.ts'
+import {
+  hadamardProduct,
+  createVector,
+  divideMatrixByScalar,
+  assertIsNotUndefined,
+} from './utils.ts'
 import { BATCH_SIZE } from './constants.ts'
 import { divideVectorByScalar, timesForEach } from './utils.ts'
 import {
@@ -190,19 +195,19 @@ export class Network {
       const σDerivatives: NumericVector = currentLayer.z.map(
         currentLayer.σDerivativeFn,
       )
+      let costByActivationDerivatives: NumericVector // ∂C/∂a
 
-      // ∂C/∂a
-      const costByActivationDerivatives: NumericVector =
-        currentLayer.isOutputLayer
-          ? currentLayer.a.map(
-              (activationValue, i) => 2 * (activationValue - this.y[i]),
-            )
-          : fromMatrix(
-              multiplyMatrices(
-                transposeMatrix(nextLayer!.w),
-                toMatrix(nextLayer!.δ),
-              ),
-            )
+      if (currentLayer.isOutputLayer) {
+        costByActivationDerivatives = currentLayer.a.map(
+          (activationValue, i) => 2 * (activationValue - this.y[i]),
+        )
+      } else {
+        assertIsNotUndefined(nextLayer)
+
+        costByActivationDerivatives = fromMatrix(
+          multiplyMatrices(transposeMatrix(nextLayer.w), toMatrix(nextLayer.δ)),
+        )
+      }
 
       // [/doc_img/network.ts/2026-09-26-18-25-14.png]
       currentLayer.δ = hadamardProduct(
