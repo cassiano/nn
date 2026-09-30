@@ -150,7 +150,6 @@ export class Layer {
    * @throws If w, b and the previous layer's `a` disagree on their dimensions.
    */
   private calculatePreActivationValues() {
-    // z(𝓁) = w(𝓁) * a(𝓁-1) + b(𝓁)
     this.z = fromMatrix(
       addMatrices(
         multiplyMatrices(this.w, toMatrix(this.previousLayer.a)),
