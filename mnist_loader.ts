@@ -106,7 +106,7 @@ export class MnistLoader {
     const rows = view.getUint32(8, false)
     const cols = view.getUint32(12, false)
 
-    const images: number[][] = []
+    const images: NumericMatrix = []
     let offset = 16
 
     for (let i = 0; i < count; i++) {

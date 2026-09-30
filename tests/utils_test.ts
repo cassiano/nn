@@ -27,7 +27,7 @@ import {
   gradientAsVector,
   formatPercentageWithDecimalPlaces,
 } from '../utils.ts'
-import { Gradient } from '../types.ts'
+import { Gradient, NumericMatrix } from '../types.ts'
 import {
   makeTinyNetwork,
   assert,
@@ -470,7 +470,7 @@ Deno.test('transposeMatrix / preserves every element exactly once', () => {
     [4, 5, 6],
   ]
   // Transposing reorders elements, so compare as a sorted multiset.
-  const flattenSorted = (m: number[][]) => m.flat().sort((a, b) => a - b)
+  const flattenSorted = (m: NumericMatrix) => m.flat().sort((a, b) => a - b)
   assertEquals(
     flattenSorted(transposeMatrix(original)),
     flattenSorted(original),
