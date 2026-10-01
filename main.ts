@@ -83,8 +83,8 @@ const main = async () => {
         (epochIdx * totalBatches + (batchIdx + 1))
 
       console.log({
-        epoch: epochIdx + 1,
-        batch: batchIdx + 1,
+        epoch: `${epochIdx + 1}/${EPOCHS}`,
+        batch: `${batchIdx + 1}/${totalBatches}`,
         cost: network.cost,
         hits,
         misses,
