@@ -193,13 +193,6 @@ export const createMatrix = (
   cols: number,
   initialValueOrFn: number | (() => number),
 ): NumericMatrix => {
-  // return timesMapN(
-  //   [rows, cols],
-  //   typeof initialValueOrFn === 'function'
-  //     ? initialValueOrFn
-  //     : () => initialValueOrFn,
-  // )
-
   const result: NumericMatrix = []
 
   for (let row = 0; row < rows; row++) {
@@ -226,13 +219,6 @@ export const createVector = (
   size: number,
   initialValueOrFn: number | (() => number),
 ): NumericVector => {
-  // return timesMap(
-  //   size,
-  //   typeof initialValueOrFn === 'function'
-  //     ? initialValueOrFn
-  //     : () => initialValueOrFn,
-  // )
-
   const result: NumericVector = []
 
   for (let i = 0; i < size; i++) {
