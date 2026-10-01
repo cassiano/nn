@@ -322,8 +322,8 @@ export const multiplyMatrices = (
 
 /** Swaps a matrix's rows and columns, reflecting it along its main diagonal. */
 export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
-  const cols = matrix[0].length
   const rows = matrix.length
+  const cols = matrix[0]?.length ?? 0
 
   const result: NumericMatrix = new Array(cols)
 
