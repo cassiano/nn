@@ -103,24 +103,24 @@ const main = async () => {
   hits = 0
   misses = 0
 
-  timesForEach(testInputs.length, i => {
-    network.loadSample(testInputs[i], testLabels[i])
+  timesForEach(testInputs.length, testImageIdx => {
+    network.loadSample(testInputs[testImageIdx], testLabels[testImageIdx])
     network.feedForward()
 
     const predictedDigit = network.predictedDigit()
 
-    if (predictedDigit === testLabels[i]) hits++
+    if (predictedDigit === testLabels[testImageIdx]) hits++
     else misses++
 
-    if ((i + 1) % 1000 === 0)
+    if ((testImageIdx + 1) % 1000 === 0)
       console.log({
-        i,
-        expected: testLabels[i],
+        i: testImageIdx,
+        expected: testLabels[testImageIdx],
         predictedDigit,
         cost: network.cost,
         hits,
         misses,
-        effectiveAccuracy: `${formatPercentageWithDecimalPlaces(hits / (i + 1), 2)}%`,
+        effectiveAccuracy: `${formatPercentageWithDecimalPlaces(hits / (testImageIdx + 1), 2)}%`,
       })
   })
 
