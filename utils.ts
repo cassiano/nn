@@ -326,8 +326,7 @@ export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
 
   const result: NumericMatrix = new Array(cols)
 
-  // Filling by destination row keeps each `result[col]` a single array instead
-  // of growing it one `??=` at a time.
+  // Pre-allocate all resulting rows.
   for (let col = 0; col < cols; col++) result[col] = new Array(rows)
 
   for (let row = 0; row < rows; row++) {
