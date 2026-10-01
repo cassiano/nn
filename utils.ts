@@ -277,19 +277,15 @@ export const addMatrices = (
       `Number of rows from left matrix (${rowsLeft}) must match number of rows from right one (${rowsRight})`,
     )
 
-  // return timesMapN(
-  //   [rowsLeft, colsLeft],
-  //   (row, col) => left[row][col] + right[row][col],
-  // )
-
-  const result: NumericMatrix = []
+  const result: NumericMatrix = new Array(rowsLeft)
 
   for (let row = 0; row < rowsLeft; row++) {
-    result[row] = []
+    const leftRow = left[row]
+    const rightRow = right[row]
+    const resultRow = (result[row] = new Array(colsLeft))
 
-    for (let col = 0; col < colsLeft; col++) {
-      result[row][col] = left[row][col] + right[row][col]
-    }
+    for (let col = 0; col < colsLeft; col++)
+      resultRow[col] = leftRow[col] + rightRow[col]
   }
 
   return result
@@ -315,17 +311,23 @@ export const multiplyMatrices = (
       `Number of columns from left matrix (${colsLeft}) must match number of rows from right one (${rowsRight})`,
     )
 
-  const result: NumericMatrix = []
+  const result: NumericMatrix = new Array(rowsLeft)
 
+  // The row of `left` and the cell being accumulated are hoisted out of the
+  // inner loop: this is the hottest loop in the whole project (it runs once per
+  // weight per sample), and repeated property lookups on nested arrays dominate
+  // the arithmetic otherwise.
   for (let row = 0; row < rowsLeft; row++) {
-    result[row] = []
+    const leftRow = left[row]
+    const resultRow = (result[row] = new Array(colsRight))
 
     for (let col = 0; col < colsRight; col++) {
-      result[row][col] = 0
+      let sum = 0
 
       // colsLeft = rowsRight
-      for (let i = 0; i < colsLeft; i++)
-        result[row][col] += left[row][i] * right[i][col]
+      for (let i = 0; i < colsLeft; i++) sum += leftRow[i] * right[i][col]
+
+      resultRow[col] = sum
     }
   }
 
@@ -337,18 +339,16 @@ export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
   const cols = matrix[0].length
   const rows = matrix.length
 
-  const result: NumericMatrix = []
+  const result: NumericMatrix = new Array(cols)
 
-  // timesForEachN([rows, cols], (row, col) => {
-  //   result[col] ??= []
-  //   result[col][row] = matrix[row][col]
-  // })
+  // Filling by destination row keeps each `result[col]` a single array instead
+  // of growing it one `??=` at a time.
+  for (let col = 0; col < cols; col++) result[col] = new Array(rows)
 
   for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      result[col] ??= []
-      result[col][row] = matrix[row][col]
-    }
+    const matrixRow = matrix[row]
+
+    for (let col = 0; col < cols; col++) result[col][row] = matrixRow[col]
   }
 
   return result
@@ -362,22 +362,17 @@ export const multiplyMatrixByScalar = (
   matrix: NumericMatrix,
   scalar: number,
 ): NumericMatrix => {
-  const rowsLeft = matrix.length
-  const colsLeft = matrix[0]?.length ?? 0
+  const rows = matrix.length
+  const cols = matrix[0]?.length ?? 0
 
-  // return timesMapN(
-  //   [rowsLeft, colsLeft],
-  //   (row, col) => matrix[row][col] * scalar,
-  // )
+  const result: NumericMatrix = new Array(rows)
 
-  const result: NumericMatrix = []
+  for (let row = 0; row < rows; row++) {
+    const matrixRow = matrix[row]
+    const resultRow = (result[row] = new Array(cols))
 
-  for (let row = 0; row < rowsLeft; row++) {
-    result[row] = []
-
-    for (let col = 0; col < colsLeft; col++) {
-      result[row][col] = matrix[row][col] * scalar
-    }
+    for (let col = 0; col < cols; col++)
+      resultRow[col] = matrixRow[col] * scalar
   }
 
   return result
