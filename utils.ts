@@ -193,13 +193,13 @@ export const createMatrix = (
   cols: number,
   initialValueOrFn: number | (() => number),
 ): NumericMatrix => {
-  const result: NumericMatrix = []
+  const result: NumericMatrix = new Array(rows)
 
   for (let row = 0; row < rows; row++) {
-    result[row] = []
+    const currentRow: NumericVector = (result[row] = new Array(cols))
 
     for (let col = 0; col < cols; col++) {
-      result[row][col] =
+      currentRow[col] =
         typeof initialValueOrFn === 'function'
           ? initialValueOrFn()
           : initialValueOrFn
@@ -219,7 +219,7 @@ export const createVector = (
   size: number,
   initialValueOrFn: number | (() => number),
 ): NumericVector => {
-  const result: NumericVector = []
+  const result: NumericVector = new Array(size)
 
   for (let i = 0; i < size; i++) {
     result[i] =
@@ -268,7 +268,7 @@ export const addMatrices = (
   for (let row = 0; row < rowsLeft; row++) {
     const leftRow = left[row]
     const rightRow = right[row]
-    const resultRow = (result[row] = new Array(colsLeft))
+    const resultRow: NumericVector = (result[row] = new Array(colsLeft))
 
     for (let col = 0; col < colsLeft; col++)
       resultRow[col] = leftRow[col] + rightRow[col]
@@ -305,7 +305,7 @@ export const multiplyMatrices = (
   // the arithmetic otherwise.
   for (let row = 0; row < rowsLeft; row++) {
     const leftRow = left[row]
-    const resultRow = (result[row] = new Array(colsRight))
+    const resultRow: NumericVector = (result[row] = new Array(colsRight))
 
     for (let col = 0; col < colsRight; col++) {
       let sum = 0
@@ -355,7 +355,7 @@ export const multiplyMatrixByScalar = (
 
   for (let row = 0; row < rows; row++) {
     const matrixRow = matrix[row]
-    const resultRow = (result[row] = new Array(cols))
+    const resultRow: NumericVector = (result[row] = new Array(cols))
 
     for (let col = 0; col < cols; col++)
       resultRow[col] = matrixRow[col] * scalar
