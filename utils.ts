@@ -403,7 +403,7 @@ export const random = (min = 0, max = 1) => Math.random() * (max - min) + min
  * Fisher-Yates shuffle, permuting the array in place, so each epoch sees the
  * data in a different order.
  */
-export const shuffle = (array: number[]): void => {
+export const shuffle = <T>(array: T[]): void => {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(random(0, i + 1))
 
