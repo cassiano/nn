@@ -310,7 +310,6 @@ export const multiplyMatrices = (
     for (let col = 0; col < colsRight; col++) {
       let sum = 0
 
-      // colsLeft = rowsRight
       for (let i = 0; i < colsLeft; i++) sum += leftRow[i] * right[i][col]
 
       resultRow[col] = sum
