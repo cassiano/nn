@@ -285,7 +285,6 @@ export class Network {
       throw new Error(`Cannot calculate average gradient (empty collection)`)
 
     const firstGradient = gradients[0]
-    const size = gradients.length
     const averageGradient: Gradient = []
 
     // Average w and b per layer, pairing entry layerIdx of every sample; the
@@ -308,8 +307,8 @@ export class Network {
 
       const averageGradientLayer: GradientLayer = {
         𝓁,
-        w: divideMatrixByScalar(summedW, size),
-        b: divideVectorByScalar(summedB, size),
+        w: divideMatrixByScalar(summedW, gradients.length),
+        b: divideVectorByScalar(summedB, gradients.length),
       }
 
       averageGradient.push(averageGradientLayer)
