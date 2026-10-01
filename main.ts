@@ -57,10 +57,6 @@ const main = async () => {
     shuffle(trainingDataIndexes)
 
     timesForEach(totalBatches, batchIdx => {
-      console.log(
-        `\nProcessing batch ${batchIdx + 1}/${totalBatches} of epoch ${epochIdx + 1}`,
-      )
-
       const batchGradients: Gradient[] = []
 
       timesForEach(BATCH_SIZE, batchImageIdx => {
@@ -78,13 +74,13 @@ const main = async () => {
         batchGradients.push(network.calculateGradient())
       })
 
-      avgCost =
-        ((epochIdx * totalBatches + batchIdx) * avgCost + network.cost) /
-        (epochIdx * totalBatches + (batchIdx + 1))
-
       const averageGradient = network.calculateAverageGradient(batchGradients)
 
       network.backPropagate(averageGradient)
+
+      avgCost =
+        ((epochIdx * totalBatches + batchIdx) * avgCost + network.cost) /
+        (epochIdx * totalBatches + (batchIdx + 1))
 
       console.log({
         epoch: epochIdx + 1,
