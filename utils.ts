@@ -405,7 +405,7 @@ export const random = (min = 0, max = 1) => Math.random() * (max - min) + min
  */
 export const shuffle = (array: number[]): void => {
   for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+    const j = Math.floor(random(0, i + 1))
 
     ;[array[i], array[j]] = [array[j], array[i]]
   }
