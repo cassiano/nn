@@ -192,13 +192,29 @@ export const createMatrix = (
   rows: number,
   cols: number,
   initialValueOrFn: number | (() => number),
-): NumericMatrix =>
-  timesMapN(
-    [rows, cols],
-    typeof initialValueOrFn === 'function'
-      ? initialValueOrFn
-      : () => initialValueOrFn,
-  )
+): NumericMatrix => {
+  // return timesMapN(
+  //   [rows, cols],
+  //   typeof initialValueOrFn === 'function'
+  //     ? initialValueOrFn
+  //     : () => initialValueOrFn,
+  // )
+
+  const result: NumericMatrix = []
+
+  for (let row = 0; row < rows; row++) {
+    result[row] = []
+
+    for (let col = 0; col < cols; col++) {
+      result[row][col] =
+        typeof initialValueOrFn === 'function'
+          ? initialValueOrFn()
+          : initialValueOrFn
+    }
+  }
+
+  return result
+}
 
 /**
  * Builds a vector of a repeated value, or of one value per entry from a
@@ -209,13 +225,25 @@ export const createMatrix = (
 export const createVector = (
   size: number,
   initialValueOrFn: number | (() => number),
-): NumericVector =>
-  timesMap(
-    size,
-    typeof initialValueOrFn === 'function'
-      ? initialValueOrFn
-      : () => initialValueOrFn,
-  )
+): NumericVector => {
+  // return timesMap(
+  //   size,
+  //   typeof initialValueOrFn === 'function'
+  //     ? initialValueOrFn
+  //     : () => initialValueOrFn,
+  // )
+
+  const result: NumericVector = []
+
+  for (let i = 0; i < size; i++) {
+    result[i] =
+      typeof initialValueOrFn === 'function'
+        ? initialValueOrFn()
+        : initialValueOrFn
+  }
+
+  return result
+}
 
 /** Wraps a vector as a single-column matrix, so it can join matrix operations. */
 export const toMatrix = (vector: NumericVector): NumericMatrix =>
@@ -249,10 +277,22 @@ export const addMatrices = (
       `Number of rows from left matrix (${rowsLeft}) must match number of rows from right one (${rowsRight})`,
     )
 
-  return timesMapN(
-    [rowsLeft, colsLeft],
-    (row, col) => left[row][col] + right[row][col],
-  )
+  // return timesMapN(
+  //   [rowsLeft, colsLeft],
+  //   (row, col) => left[row][col] + right[row][col],
+  // )
+
+  const result: NumericMatrix = []
+
+  for (let row = 0; row < rowsLeft; row++) {
+    result[row] = []
+
+    for (let col = 0; col < colsLeft; col++) {
+      result[row][col] = left[row][col] + right[row][col]
+    }
+  }
+
+  return result
 }
 
 /**
@@ -299,10 +339,17 @@ export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
 
   const result: NumericMatrix = []
 
-  timesForEachN([rows, cols], (row, col) => {
-    result[col] ??= []
-    result[col][row] = matrix[row][col]
-  })
+  // timesForEachN([rows, cols], (row, col) => {
+  //   result[col] ??= []
+  //   result[col][row] = matrix[row][col]
+  // })
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      result[col] ??= []
+      result[col][row] = matrix[row][col]
+    }
+  }
 
   return result
 }
@@ -318,10 +365,22 @@ export const multiplyMatrixByScalar = (
   const rowsLeft = matrix.length
   const colsLeft = matrix[0]?.length ?? 0
 
-  return timesMapN(
-    [rowsLeft, colsLeft],
-    (row, col) => matrix[row][col] * scalar,
-  )
+  // return timesMapN(
+  //   [rowsLeft, colsLeft],
+  //   (row, col) => matrix[row][col] * scalar,
+  // )
+
+  const result: NumericMatrix = []
+
+  for (let row = 0; row < rowsLeft; row++) {
+    result[row] = []
+
+    for (let col = 0; col < colsLeft; col++) {
+      result[row][col] = matrix[row][col] * scalar
+    }
+  }
+
+  return result
 }
 
 /**
