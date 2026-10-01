@@ -121,7 +121,7 @@ Training hyperparameters, all in `constants.ts`:
 
 ### Notation used in the code
 
-- `𝓁` — layer index (1 = first hidden layer, 𝐋 = last / output layer)
+- `𝓁` — layer index (0 = input layer, 1 = first hidden layer, ..., 𝐋 = last / output layer)
 - `w`, `b` — weights, biases
 - `z` — pre-activation values
 - `a` — activations
