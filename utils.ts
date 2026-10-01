@@ -196,10 +196,10 @@ export const createMatrix = (
   const result: NumericMatrix = new Array(rows)
 
   for (let row = 0; row < rows; row++) {
-    const currentRow: NumericVector = (result[row] = new Array(cols))
+    const resultRow: NumericVector = (result[row] = new Array(cols))
 
     for (let col = 0; col < cols; col++) {
-      currentRow[col] =
+      resultRow[col] =
         typeof initialValueOrFn === 'function'
           ? initialValueOrFn()
           : initialValueOrFn
