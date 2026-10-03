@@ -1,34 +1,32 @@
+import { MnistLoader, MNIST_IMAGE_MAGIC, MNIST_LABEL_MAGIC } from '../mnist_loader.ts'
 import {
-  MnistLoader,
-  MNIST_OUTPUT_SIZE,
-  MNIST_IMAGE_COLS,
-  MNIST_IMAGE_ROWS,
-  MNIST_IMAGE_MAGIC,
-  MNIST_LABEL_MAGIC,
-  MNIST_PIXEL_MAX,
-} from '../mnist_loader.ts'
+  DATASET_OUTPUT_SIZE,
+  DATASET_IMAGE_COLS,
+  DATASET_IMAGE_ROWS,
+  DATASET_PIXEL_MAX,
+} from '../dataset.ts'
 import { assert, assertEquals, assertThrows } from './test_helpers.ts'
 
 Deno.test(
   'MNIST / dataset constants describe the canonical dataset layout',
   () => {
-    assertEquals(MNIST_OUTPUT_SIZE, 10) // digits 0-9
-    assertEquals(MNIST_IMAGE_ROWS, 28)
-    assertEquals(MNIST_IMAGE_COLS, 28)
+    assertEquals(DATASET_OUTPUT_SIZE, 10) // digits 0-9
+    assertEquals(DATASET_IMAGE_ROWS, 28)
+    assertEquals(DATASET_IMAGE_COLS, 28)
+    assertEquals(DATASET_PIXEL_MAX, 255) // pixel byte max
     assertEquals(MNIST_IMAGE_MAGIC, 2051) // 0x00000803
     assertEquals(MNIST_LABEL_MAGIC, 2049) // 0x00000801
-    assertEquals(MNIST_PIXEL_MAX, 255) // pixel byte max
   },
 )
 
 Deno.test('MnistLoader / imageToText renders a blank image as spaces', () => {
   const text = MnistLoader.imageToText(new Array(784).fill(0))
-  const rows = text.split('\n').slice(0, MNIST_IMAGE_ROWS)
-  assertEquals(rows.length, MNIST_IMAGE_ROWS)
+  const rows = text.split('\n').slice(0, DATASET_IMAGE_ROWS)
+  assertEquals(rows.length, DATASET_IMAGE_ROWS)
   for (const row of rows) {
     // Characters are doubled horizontally for near-square pixels.
-    assertEquals(row.length, MNIST_IMAGE_COLS * 2)
-    assertEquals(row, ' '.repeat(MNIST_IMAGE_COLS * 2))
+    assertEquals(row.length, DATASET_IMAGE_COLS * 2)
+    assertEquals(row, ' '.repeat(DATASET_IMAGE_COLS * 2))
   }
 })
 
@@ -37,8 +35,8 @@ Deno.test(
   () => {
     const rows = MnistLoader.imageToText(new Array(784).fill(1))
       .split('\n')
-      .slice(0, MNIST_IMAGE_ROWS)
-    for (const row of rows) assertEquals(row, '█'.repeat(MNIST_IMAGE_COLS * 2))
+      .slice(0, DATASET_IMAGE_ROWS)
+    for (const row of rows) assertEquals(row, '█'.repeat(DATASET_IMAGE_COLS * 2))
   },
 )
 
@@ -80,7 +78,7 @@ Deno.test(
 
     // Every image is a flattened 28x28 vector of pixels normalized to [0, 1].
     for (const image of loader.trainingData.inputs.slice(0, 50)) {
-      assertEquals(image.length, MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS)
+      assertEquals(image.length, DATASET_IMAGE_ROWS * DATASET_IMAGE_COLS)
       for (const pixel of image) assert(pixel >= 0 && pixel <= 1)
     }
 
@@ -108,8 +106,22 @@ Deno.test(
     const rows = loader
       .imageAsText('trainingData', 0)
       .split('\n')
-      .slice(0, MNIST_IMAGE_ROWS)
-    assertEquals(rows.length, MNIST_IMAGE_ROWS)
-    for (const row of rows) assertEquals(row.length, MNIST_IMAGE_COLS * 2)
+      .slice(0, DATASET_IMAGE_ROWS)
+    assertEquals(rows.length, DATASET_IMAGE_ROWS)
+    for (const row of rows) assertEquals(row.length, DATASET_IMAGE_COLS * 2)
   },
 )
+
+Deno.test('MnistLoader / className returns the digit index', async () => {
+  const loader = new MnistLoader()
+  await loader.load()
+
+  // The digit set ships no name table, so the index is the label.
+  assertEquals(loader.className(0), '0')
+  assertEquals(loader.className(7), '7')
+})
+
+Deno.test('MnistLoader / className throws before load()', () => {
+  const loader = new MnistLoader()
+  assertThrows(() => loader.className(0), 'not to be null')
+})

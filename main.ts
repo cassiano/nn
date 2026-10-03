@@ -1,10 +1,12 @@
-import {
-  BATCH_SIZE,
-  NETWORK_LAYER_CONFIG,
-  NETWORK_LEARNING_RATE,
-  EPOCHS,
-} from './constants.ts'
+import { NETWORK_LAYER_CONFIG, TRAINING_CONFIG } from './constants.ts'
+import { AnimalMnistLoader } from './animal_mnist_loader.ts'
 import { MnistLoader } from './mnist_loader.ts'
+import {
+  DATASET_FLAG_USAGE,
+  parseDatasetFlag,
+  wantsHelp,
+} from './dataset.ts'
+import type { DatasetChoice, DatasetLoader } from './dataset.ts'
 import { Network } from './network.ts'
 import {
   assertIsNotNull,
@@ -18,39 +20,65 @@ import { timesForEach } from './utils.ts'
 // The network and loader are kept at module scope (rather than local to `main`) so
 // they stay accessible (and inspectable) from the Deno console after training.
 let network: Network
-let loader: MnistLoader
+let loader: DatasetLoader
 
 /**
- * Entry point: loads MNIST, builds the network from
+ * Builds the loader for the chosen dataset. Both loaders expose the same
+ * {@link DatasetLoader} surface, so the rest of `main` is dataset-agnostic.
+ *
+ * @param choice Which dataset to read.
+ * @returns A loader for that dataset, not yet loaded.
+ */
+const createLoader = (choice: DatasetChoice): DatasetLoader =>
+  choice === 'animal' ? new AnimalMnistLoader() : new MnistLoader()
+
+/**
+ * Entry point: loads the requested dataset (digits by default, animals with
+ * -a), builds the network from
  * {@link NETWORK_LAYER_CONFIG}, trains it with mini-batch gradient descent for
- * {@link EPOCHS} epochs, then scores it on the test split.
+ * as many epochs as {@link TRAINING_CONFIG} sets for that dataset, then scores
+ * it on the test split.
  *
  * Each epoch reshuffles the samples and walks whole batches of
- * {@link BATCH_SIZE}: the gradients of the batch are collected, averaged and
- * applied in one step, so the numbers logged for a batch describe the weights
- * as they were *before* that step.
+ * {@link TRAINING_CONFIG}'s `batchSize`: the gradients of the batch are
+ * collected, averaged and applied in one step, so the numbers logged for a batch
+ * describe the weights as they were *before* that step.
  */
 const main = async () => {
-  // Load the MNIST dataset from the zipped IDX files in ./data/mnist.
-  loader = new MnistLoader()
+  const args = Deno.args
+
+  if (wantsHelp(args)) {
+    console.log(DATASET_FLAG_USAGE)
+    return
+  }
+
+  const choice = parseDatasetFlag(args)
+
+  // Digits come from the gzipped IDX files in ./data/mnist, animals from the
+  // .npz bundle in ./data/animal-mnist.
+  loader = createLoader(choice)
   await loader.load(console.log)
   assertIsNotNull(loader.trainingData)
   assertIsNotNull(loader.testData)
 
-  // Build the network topology and learning rate (η).
-  network = new Network(NETWORK_LAYER_CONFIG, NETWORK_LEARNING_RATE)
+  // Each dataset brings its own epoch count, learning rate (η) and batch size.
+  const { epochs, learningRate, batchSize } = TRAINING_CONFIG[choice]
 
+  // Build the network topology, learning rate (η) and batch size.
+  network = new Network(NETWORK_LAYER_CONFIG, learningRate, batchSize)
+
+  console.log({ dataset: choice, epochs, learningRate, batchSize })
   console.log({ parameterCount: network.parameterCount })
 
   const { inputs, labels } = loader.trainingData
-  const totalBatches = Math.trunc(inputs.length / BATCH_SIZE)
+  const totalBatches = Math.trunc(inputs.length / batchSize)
   const trainingDataIndexes = timesMap(inputs.length, i => i)
 
   let avgCost = 0
   let hits: number
   let misses: number
 
-  timesForEach(EPOCHS, epochIdx => {
+  timesForEach(epochs, epochIdx => {
     hits = 0
     misses = 0
 
@@ -59,9 +87,9 @@ const main = async () => {
     timesForEach(totalBatches, batchIdx => {
       const batchGradients: Gradient[] = []
 
-      timesForEach(BATCH_SIZE, batchImageIdx => {
+      timesForEach(batchSize, batchImageIdx => {
         const sampleIndex =
-          trainingDataIndexes[batchIdx * BATCH_SIZE + batchImageIdx]
+          trainingDataIndexes[batchIdx * batchSize + batchImageIdx]
 
         network.loadSample(inputs[sampleIndex], labels[sampleIndex])
         network.feedForward()
@@ -83,13 +111,13 @@ const main = async () => {
         (epochIdx * totalBatches + (batchIdx + 1))
 
       console.log({
-        epoch: `${epochIdx + 1}/${EPOCHS}`,
+        epoch: `${epochIdx + 1}/${epochs}`,
         batch: `${batchIdx + 1}/${totalBatches}`,
         cost: network.cost,
         hits,
         misses,
         avgCost,
-        epochAccuracy: `${formatPercentageWithDecimalPlaces(hits / ((batchIdx + 1) * BATCH_SIZE), 2)}%`,
+        epochAccuracy: `${formatPercentageWithDecimalPlaces(hits / ((batchIdx + 1) * batchSize), 2)}%`,
       })
     })
   })
@@ -129,7 +157,9 @@ const main = async () => {
   console.log('--------------')
 
   console.log({
-    epochs: EPOCHS,
+    dataset: choice,
+    epochs,
+    batchSize,
     η: network.η,
     cost: network.cost,
     hits,

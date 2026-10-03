@@ -6,6 +6,12 @@ export function resetLayerCounter(): void {
   Layer.id = 0
 }
 
+/**
+ * Batch size the test harnesses build their networks with. Chosen to match the
+ * production value so the hand-verified arithmetic in the tests stays exact.
+ */
+export const TEST_BATCH_SIZE = 60
+
 /** The standard MNIST-sized network (784 -> 16 -> 16 -> 10), with random weights. */
 export function makeStandardNetwork(): Network {
   resetLayerCounter()
@@ -17,6 +23,7 @@ export function makeStandardNetwork(): Network {
       { name: 'Output Layer', size: 10, σ: 'softmax' },
     ],
     0.01,
+    TEST_BATCH_SIZE,
   )
 }
 
@@ -33,6 +40,7 @@ export function makeTinyNetwork(
   network.layers = []
   network.y = []
   network.η = 0.01
+  network.batchSize = TEST_BATCH_SIZE
 
   network.layers.push(new Layer(network, 'input', 2))
   network.layers.push(new Layer(network, 'hidden', 2, σHidden))
@@ -50,6 +58,7 @@ export function makeTinyNetworkWithoutActivation(
   network.layers = []
   network.y = []
   network.η = 0.01
+  network.batchSize = TEST_BATCH_SIZE
 
   network.layers.push(new Layer(network, 'input', 2))
   network.layers.push(new Layer(network, 'hidden', 2))

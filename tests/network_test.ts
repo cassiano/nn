@@ -1,5 +1,11 @@
 import { sigmoid } from '../activation.ts'
-import { makeStandardNetwork, makeTinyNetwork, makeTinyNetworkWithoutActivation, resetLayerCounter } from './test_helpers.ts'
+import {
+  makeStandardNetwork,
+  makeTinyNetwork,
+  makeTinyNetworkWithoutActivation,
+  resetLayerCounter,
+  TEST_BATCH_SIZE,
+} from './test_helpers.ts'
 import {
   assert,
   assertEquals,
@@ -10,8 +16,11 @@ import {
 import { Network } from '../network.ts'
 import { Layer } from '../layer.ts'
 import { Gradient } from '../types.ts'
-import { BATCH_SIZE } from '../constants.ts'
-import { MNIST_IMAGE_COLS, MNIST_IMAGE_ROWS, MNIST_OUTPUT_SIZE } from '../mnist_loader.ts'
+import {
+  DATASET_IMAGE_COLS,
+  DATASET_IMAGE_ROWS,
+  DATASET_OUTPUT_SIZE,
+} from '../dataset.ts'
 
 /**
  * Builds a 2 -> 2 -> 2 network with fixed weights, so the gradient can be
@@ -78,8 +87,8 @@ function numericPartial(
 Deno.test('Network / constructor builds the expected topology', () => {
   const net = makeStandardNetwork()
   assertEquals(net.layers.length, 4)
-  assertEquals(net.inputLayer.size, MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS)
-  assertEquals(net.outputLayer.size, MNIST_OUTPUT_SIZE)
+  assertEquals(net.inputLayer.size, DATASET_IMAGE_ROWS * DATASET_IMAGE_COLS)
+  assertEquals(net.outputLayer.size, DATASET_OUTPUT_SIZE)
 })
 
 Deno.test('Network / constructor rejects a non-784 input layer', () => {
@@ -89,6 +98,7 @@ Deno.test('Network / constructor rejects a non-784 input layer', () => {
       new Network(
         [{ name: 'in', size: 1 }, { name: 'out', size: 10 }],
         0.01,
+        TEST_BATCH_SIZE,
       ),
     'Expected input layer size',
   )
@@ -101,6 +111,7 @@ Deno.test('Network / constructor rejects a non-10-class output layer', () => {
       new Network(
         [{ name: 'in', size: 784 }, { name: 'out', size: 3 }],
         0.01,
+        TEST_BATCH_SIZE,
       ),
     'Expected output layer size',
   )
@@ -488,8 +499,8 @@ Deno.test('Network / calculateAverageGradient throws when a sample is missing a 
 })
 
 Deno.test('Network / backPropagate steps the weights against the gradient', () => {
-  // Exact arithmetic: the update is w -= η·BATCH_SIZE·∂C/∂w, with the BATCH_SIZE
-  // factor cancelling the 1/BATCH_SIZE that calculateAverageGradient divides by.
+  // Exact arithmetic: the update is w -= η·batchSize·∂C/∂w, with the batchSize
+  // factor cancelling the 1/n that calculateAverageGradient divides by.
   const net = makeTinyNetwork()
   const [input, hidden, output] = net.layers
   input.a = [0.5, 0.9]
@@ -505,7 +516,7 @@ Deno.test('Network / backPropagate steps the weights against the gradient', () =
 
   net.backPropagate(gradient)
 
-  const rate = net.η * BATCH_SIZE
+  const rate = net.η * net.batchSize
   for (let r = 0; r < 2; r++) {
     for (let c = 0; c < 2; c++) {
       assertClose(
@@ -546,10 +557,36 @@ Deno.test('Network / backPropagate applies entries by their 𝓁, not their posi
 
   // Only (0,0) of the output layer and (1,1) of the hidden layer move; the
   // entry emitted second in the reversed list must not touch the output layer.
-  assertClose(output.w[0][0], -net.η * BATCH_SIZE, 1e-12)
+  assertClose(output.w[0][0], -net.η * net.batchSize, 1e-12)
   assertClose(output.w[1][0], 0, 1e-12)
-  assertClose(hidden.w[1][1], -net.η * BATCH_SIZE, 1e-12)
+  assertClose(hidden.w[1][1], -net.η * net.batchSize, 1e-12)
   assertClose(hidden.w[0][0], 0, 1e-12)
+})
+
+Deno.test('Network / backPropagate scales by the network batch size', () => {
+  // Locks that the multiplier comes from `batchSize` rather than a module
+  // constant, which is what lets each dataset choose its own.
+  const net = makeTinyNetwork()
+  net.batchSize = 3
+  const [input, hidden, output] = net.layers
+  input.a = [0.5, 0.9]
+  hidden.w = [[0.7, -0.2], [0.1, 0.4]]
+  hidden.b = [0.1, -0.3]
+  output.w = [[1, 0.5], [-0.5, 2]]
+  output.b = [0.2, -0.1]
+
+  const gradient: Gradient = [
+    { 𝓁: 2, w: [[1, 2], [3, 4]], b: [5, 6] },
+    { 𝓁: 1, w: [[7, 8], [9, 10]], b: [11, 12] },
+  ]
+
+  net.backPropagate(gradient)
+
+  const rate = net.η * 3
+  assertClose(output.w[0][0], 1 - rate * gradient[0].w[0][0], 1e-12)
+  assertClose(output.w[1][0], -0.5 - rate * gradient[0].w[1][0], 1e-12)
+  assertClose(hidden.w[1][1], 0.4 - rate * gradient[1].w[1][1], 1e-12)
+  assertClose(hidden.b[0], 0.1 - rate * gradient[1].b[0], 1e-12)
 })
 
 Deno.test('Network / backPropagate throws for a 𝓁 that is not a layer', () => {
@@ -585,10 +622,10 @@ Deno.test('Network / backPropagate throws when a gradient shape does not fit', (
 
 Deno.test('Network / backPropagate reduces the cost of the current sample', () => {
   // One real gradient step on a fixed, hand-computable network. η is scaled by
-  // 1/BATCH_SIZE so the effective step stays small, since a step of η·BATCH_SIZE
+  // 1/batchSize so the effective step stays small, since a step of η·batchSize
   // would overshoot this toy network.
   const net = makeSeededTinyNetwork()
-  net.η = 0.01 / BATCH_SIZE
+  net.η = 0.01 / net.batchSize
 
   const costBefore = net.cost
   net.backPropagate(net.calculateGradient())
@@ -604,7 +641,7 @@ Deno.test('Network / a mini-batch step lowers the batch total cost', () => {
   // batch's costs, not on each sample individually — one mean direction cannot
   // lower every sample's cost at once, so only the total is claimed here.
   const net = makeStandardNetwork()
-  net.η = 0.01 / BATCH_SIZE
+  net.η = 0.01 / net.batchSize
 
   const samples = [0, 1, 2, 3].map(i => ({
     inputs: new Array(784).fill(i / 3),
@@ -648,7 +685,7 @@ Deno.test('Network / predictedDigit breaks ties towards the first index', () => 
   // findIndex returns the first match, so a flat output layer predicts 0 rather
   // than an arbitrary digit.
   const net = makeStandardNetwork()
-  net.outputLayer.a = new Array(MNIST_OUTPUT_SIZE).fill(0.1)
+  net.outputLayer.a = new Array(DATASET_OUTPUT_SIZE).fill(0.1)
 
   assertEquals(net.predictedDigit(), 0)
 })

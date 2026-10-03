@@ -23,13 +23,12 @@ import {
   divideMatrixByScalar,
   assertIsNotUndefined,
 } from './utils.ts'
-import { BATCH_SIZE } from './constants.ts'
 import { divideVectorByScalar, timesForEach } from './utils.ts'
 import {
-  MNIST_OUTPUT_SIZE,
-  MNIST_IMAGE_COLS,
-  MNIST_IMAGE_ROWS,
-} from './mnist_loader.ts'
+  DATASET_OUTPUT_SIZE,
+  DATASET_IMAGE_COLS,
+  DATASET_IMAGE_ROWS,
+} from './dataset.ts'
 
 /**
  * A feedforward network made of an ordered list of {@link Layer}s, indexed by
@@ -54,12 +53,15 @@ export class Network {
    * @param layersData One entry per layer, in feedforward order.
    * @param η Learning rate, used by {@link Network.backPropagate} to scale each
    * update.
+   * @param batchSize Samples per update, which {@link Network.backPropagate}
+   * scales by so that η remains a per-sample rate.
    * @returns Nothing; the layers are stored on the network.
    * @throws If the architecture does not match the dataset (784 in, 10 out).
    */
   constructor(
     layersData: InitialLayerData[],
     public η: number, // Learning rate (greek letter eta)
+    public batchSize: number,
   ) {
     for (const data of layersData) {
       const layer = new Layer(this, data.name, data.size, data.σ)
@@ -67,15 +69,15 @@ export class Network {
       this.layers.push(layer)
     }
 
-    // The architecture must match the dataset: 28x28 pixels in, 10 digits out.
-    if (this.inputLayer.size !== MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS)
+    // The architecture must match the dataset: 28x28 pixels in, 10 classes out.
+    if (this.inputLayer.size !== DATASET_IMAGE_ROWS * DATASET_IMAGE_COLS)
       throw new Error(
-        `Expected input layer size of ${MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS} but got ${this.inputLayer.size}`,
+        `Expected input layer size of ${DATASET_IMAGE_ROWS * DATASET_IMAGE_COLS} but got ${this.inputLayer.size}`,
       )
 
-    if (this.outputLayer.size !== MNIST_OUTPUT_SIZE)
+    if (this.outputLayer.size !== DATASET_OUTPUT_SIZE)
       throw new Error(
-        `Expected output layer size of ${MNIST_OUTPUT_SIZE} but got ${this.outputLayer.size}`,
+        `Expected output layer size of ${DATASET_OUTPUT_SIZE} but got ${this.outputLayer.size}`,
       )
   }
 
@@ -122,10 +124,10 @@ export class Network {
 
   /**
    * Registers a training sample: the raw inputs on the input layer, and the
-   * digit as a one-hot target in {@link Network.y}. Does not run a forward pass.
+   * class as a one-hot target in {@link Network.y}. Does not run a forward pass.
    *
    * @param inputs One value per input neuron, expected normalized to [0, 1].
-   * @param label The digit the image depicts, 0-9.
+   * @param label The class the image depicts, 0-9.
    * @returns Nothing; the sample is stored on the network.
    * @throws If `inputs` is not the input layer's size.
    */
@@ -137,7 +139,7 @@ export class Network {
 
     this.inputLayer.a = inputs
 
-    this.y = timesMap(MNIST_OUTPUT_SIZE, i => (i === label ? 1 : 0))
+    this.y = timesMap(DATASET_OUTPUT_SIZE, i => (i === label ? 1 : 0))
   }
 
   /**
@@ -171,7 +173,7 @@ export class Network {
   }
 
   /**
-   * The digit the network currently predicts, given a prior forward pass.
+   * The class index the network currently predicts, given a prior forward pass.
    *
    * @returns The index of the highest activation, 0-9.
    */
@@ -251,10 +253,10 @@ export class Network {
   /**
    * One gradient-descent step over every trainable parameter:
    *
-   *   w(𝓁) ← w(𝓁) - η·BATCH_SIZE·∂C/∂w(𝓁)
-   *   b(𝓁) ← b(𝓁) - η·BATCH_SIZE·∂C/∂b(𝓁)
+   *   w(𝓁) ← w(𝓁) - η·batchSize·∂C/∂w(𝓁)
+   *   b(𝓁) ← b(𝓁) - η·batchSize·∂C/∂b(𝓁)
    *
-   * BATCH_SIZE cancels the averaging done in
+   * `batchSize` cancels the averaging done in
    * {@link Network.calculateAverageGradient}, so η remains the per-sample rate
    * and a batch of a different length is not compensated for.
    *
@@ -274,12 +276,12 @@ export class Network {
 
       layer.w = addMatrices(
         layer.w,
-        multiplyMatrixByScalar(w, -this.η * BATCH_SIZE),
+        multiplyMatrixByScalar(w, -this.η * this.batchSize),
       )
 
       layer.b = addVectors(
         layer.b,
-        multiplyVectorByScalar(b, -this.η * BATCH_SIZE),
+        multiplyVectorByScalar(b, -this.η * this.batchSize),
       )
     }
   }

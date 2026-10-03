@@ -1,32 +1,16 @@
-import type { TrainingData } from './types.ts'
-import { map, timesForEachN, assertIsNotNull } from './utils.ts'
-import { NumericMatrix } from './types.ts'
+import type { NumericMatrix, TrainingData } from './types.ts'
+import { assertIsNotNull } from './utils.ts'
+import { DATASET_PIXEL_MAX, imageToText } from './dataset.ts'
 
 // MNIST dataset: constants describing the format, plus a loader for the
-// gzipped IDX files bundled in ./data/mnist.
-
-/** Number of distinct digit classes in the dataset (0-9). */
-export const MNIST_OUTPUT_SIZE = 10
-
-/** Height in pixels of each MNIST image. */
-export const MNIST_IMAGE_ROWS = 28
-
-/** Width in pixels of each MNIST image. */
-export const MNIST_IMAGE_COLS = 28
+// gzipped IDX files bundled in ./data/mnist. Kept alongside the Animal-MNIST
+// loader; both satisfy the DatasetLoader contract in dataset.ts.
 
 /** IDX magic number expected at the start of every image file. */
 export const MNIST_IMAGE_MAGIC = 0x00000803 // 2051
 
 /** IDX magic number expected at the start of every label file. */
 export const MNIST_LABEL_MAGIC = 0x00000801 // 2049
-
-/** Largest value a raw pixel byte can hold, used to normalize pixels to [0, 1]. */
-export const MNIST_PIXEL_MAX = 2 ** 8 - 1 // 255
-
-/**
- * Characters used to render an image as text, ordered from darkest to lightest.
- */
-const IMAGE_TO_TEXT_MAPPING = ' ░▒▓▉█'
 
 /** The four dataset files, gzipped and in Big Endian IDX format. */
 const MNIST_PATHS = {
@@ -87,6 +71,19 @@ export class MnistLoader {
   }
 
   /**
+   * Returns the name of a class index. The digit set has no name table, so the
+   * index itself is the label.
+   *
+   * @param label Class index, in [0, 9].
+   * @returns The digit as text, or the index itself when out of range.
+   * @throws If the dataset has not been loaded.
+   */
+  className(label: number): string {
+    assertIsNotNull(this.trainingData)
+    return String(label)
+  }
+
+  /**
    * Reads a gzipped IDX image file. After decompression the header holds the
    * magic number, the image count, the rows and the columns (4 bytes each,
    * big-endian), followed by one byte per pixel, row-major.
@@ -115,7 +112,7 @@ export class MnistLoader {
       const image: number[] = []
 
       for (let j = 0; j < rows * cols; j++)
-        image.push(decompressed[offset++] / MNIST_PIXEL_MAX)
+        image.push(decompressed[offset++] / DATASET_PIXEL_MAX)
 
       images.push(image)
     }
@@ -217,21 +214,6 @@ export class MnistLoader {
    * @returns The image as text, one line per row of pixels.
    */
   static imageToText(image: number[]): string {
-    let text = ''
-
-    timesForEachN([MNIST_IMAGE_ROWS, MNIST_IMAGE_COLS], (row, col) => {
-      const pixelIndex = row * MNIST_IMAGE_COLS + col
-      const value = image[pixelIndex]
-      const charIndex = Math.trunc(
-        map(value, 0, 1, 0, IMAGE_TO_TEXT_MAPPING.length - 1, true),
-      )
-      const unicodeChar = IMAGE_TO_TEXT_MAPPING[charIndex]
-
-      text += unicodeChar.repeat(2)
-
-      if (col === MNIST_IMAGE_COLS - 1) text += '\n'
-    })
-
-    return text
+    return imageToText(image)
   }
 }
