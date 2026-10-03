@@ -61,7 +61,7 @@ network harnesses).
 ├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, Gradient, …)
 ├── utils.ts          # Loop helpers, matrix ops, random, shuffle, assertions
 ├── constants.ts      # Hyperparameters and the network topology
-├── tests/            # Automated test suite (168 tests) + shared test helpers
+├── tests/            # Automated test suite (169 tests) + shared test helpers
 ├── doc_img/          # Screenshots/diagrams referenced from the source comments
 ├── tsconfig.json     # TS configuration (bundler-style, strict)
 └── data/mnist/       # The four zipped MNIST data files

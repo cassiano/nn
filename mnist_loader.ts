@@ -55,6 +55,7 @@ export class MnistLoader {
    * {@link MnistLoader.testData}. Safe to call more than once.
    *
    * @param onProgress Called with status messages as each file is read.
+   * @returns Nothing; the parsed splits are stored on the loader.
    * @throws If a file is missing, is not valid gzip, or has the wrong magic number.
    */
   async load(onProgress?: (msg: string) => void): Promise<void> {
@@ -90,6 +91,7 @@ export class MnistLoader {
    * magic number, the image count, the rows and the columns (4 bytes each,
    * big-endian), followed by one byte per pixel, row-major.
    *
+   * @param path Filesystem path of the gzipped IDX image file.
    * @returns One flattened image per row, values normalized to [0, 1].
    * @throws If the file cannot be read, is not valid gzip, or is not an image file.
    */
@@ -125,6 +127,7 @@ export class MnistLoader {
    * Reads a gzipped IDX label file: the same 4-byte header of magic number and
    * count, then one byte per label.
    *
+   * @param path Filesystem path of the gzipped IDX label file.
    * @returns One digit per label, in file order.
    * @throws If the file cannot be read, is not valid gzip, or is not a label file.
    */
@@ -145,7 +148,13 @@ export class MnistLoader {
     return labels
   }
 
-  /** Decompresses gzip bytes with the built-in DecompressionStream API. */
+  /**
+   * Decompresses gzip bytes with the built-in DecompressionStream API.
+   *
+   * @param data The compressed bytes.
+   * @returns The decompressed bytes, concatenated in stream order.
+   * @throws If the bytes are not valid gzip.
+   */
   private async gunzip(data: Uint8Array): Promise<Uint8Array> {
     const ds = new DecompressionStream('gzip')
     const writer = ds.writable.getWriter()
@@ -184,6 +193,9 @@ export class MnistLoader {
    * Renders one image from the loaded dataset as text, chosen by split and
    * index.
    *
+   * @param type Which split to read from.
+   * @param index Position of the image within that split.
+   * @returns The image as text, one line per row of pixels.
    * @throws If the dataset has not been loaded, or the index is out of bounds.
    */
   imageAsText(type: 'trainingData' | 'testData', index: number): string {
@@ -200,6 +212,9 @@ export class MnistLoader {
   /**
    * Renders a flattened image as text, mapping each pixel to a character from
    * ` ░▒▓▉█` and doubling it horizontally to approximate square pixels.
+   *
+   * @param image One flattened image, row-major.
+   * @returns The image as text, one line per row of pixels.
    */
   static imageToText(image: number[]): string {
     let text = ''

@@ -56,9 +56,11 @@ export class Layer {
    * layer. Layers are expected to be constructed in feedforward order, since
    * each one needs the layer before it.
    *
+   * @param network The network this layer belongs to.
    * @param name Human-readable label, used in debug output.
    * @param size Number of neurons.
    * @param σ Activation applied to z to produce a.
+   * @returns Nothing; the layer registers itself with its network.
    * @throws If no previous layer exists yet to size w against.
    */
   constructor(
@@ -73,29 +75,29 @@ export class Layer {
   }
 
   /** How many parameters this layer owns: its weights plus its biases. */
-  get parameterCount() {
+  get parameterCount(): number {
     return this.isInputLayer
       ? 0
       : this.w.length * this.w[0].length + this.b.length
   }
 
   /** The layer feeding into this one. */
-  get previousLayer() {
+  get previousLayer(): Layer {
     return this.network.previousLayer(this.𝓁)
   }
 
   /** The layer fed by this one, which backpropagation uses to carry δ further back. */
-  get nextLayer() {
+  get nextLayer(): Layer {
     return this.network.nextLayer(this.𝓁)
   }
 
   /** Whether this is the network's first layer. */
-  get isInputLayer() {
+  get isInputLayer(): boolean {
     return this.𝓁 === 0
   }
 
   /** Whether this is the network's last layer, whose activations are the prediction. */
-  get isOutputLayer() {
+  get isOutputLayer(): boolean {
     return this.𝓁 === this.network.𝐋
   }
 
@@ -103,9 +105,10 @@ export class Layer {
    * Recomputes this layer's activations from its inputs: z from the previous
    * layer, then a by applying σ.
    *
+   * @returns Nothing; {@link Layer.z} and {@link Layer.a} are updated in place.
    * @throws If σ is missing, or if the incoming dimensions do not line up.
    */
-  calculatePostActivationValues() {
+  calculatePostActivationValues(): void {
     this.calculatePreActivationValues()
     this.applyActivationFunction()
   }
@@ -114,9 +117,10 @@ export class Layer {
    * The derivative σ' of this layer's activation, as a function of z, used to
    * build δ. Softmax reports a constant 1, leaving δ as the plain ∂C/∂a.
    *
+   * @returns The derivative of this layer's activation.
    * @throws If σ is missing.
    */
-  get σDerivativeFn() {
+  get σDerivativeFn(): (z: number) => number {
     if (this.σ === undefined)
       throw new Error(`Expected activation function to be defined`)
 
@@ -136,8 +140,12 @@ export class Layer {
     }
   }
 
-  /** Gives the layer a random, non-symmetric starting point. */
-  private initializeNetworkParameters() {
+  /**
+   * Gives the layer a random, non-symmetric starting point.
+   *
+   * @returns Nothing; {@link Layer.w} and {@link Layer.b} are set in place.
+   */
+  private initializeNetworkParameters(): void {
     this.w = createMatrix(this.size, this.previousLayer.size, () =>
       random(-1, 1),
     )
@@ -147,9 +155,10 @@ export class Layer {
   /**
    * Computes z(𝓁) = w(𝓁)·a(𝓁-1) + b(𝓁).
    *
+   * @returns Nothing; {@link Layer.z} is stored in place.
    * @throws If w, b and the previous layer's `a` disagree on their dimensions.
    */
-  private calculatePreActivationValues() {
+  private calculatePreActivationValues(): void {
     this.z = fromMatrix(
       addMatrices(
         multiplyMatrices(this.w, toMatrix(this.previousLayer.a)),
@@ -161,9 +170,10 @@ export class Layer {
   /**
    * Applies σ to z, storing the result in a.
    *
+   * @returns Nothing; {@link Layer.a} is stored in place.
    * @throws If σ is missing.
    */
-  private applyActivationFunction() {
+  private applyActivationFunction(): void {
     if (this.σ === undefined)
       throw new Error(`Expected activation function to be defined`)
 

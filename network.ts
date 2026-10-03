@@ -54,6 +54,7 @@ export class Network {
    * @param layersData One entry per layer, in feedforward order.
    * @param η Learning rate, used by {@link Network.backPropagate} to scale each
    * update.
+   * @returns Nothing; the layers are stored on the network.
    * @throws If the architecture does not match the dataset (784 in, 10 out).
    */
   constructor(
@@ -79,26 +80,28 @@ export class Network {
   }
 
   /** First layer, holding the raw inputs. */
-  get inputLayer() {
+  get inputLayer(): Layer {
     return this.layers[0]
   }
 
   /** Last layer, whose activations are the network's prediction. */
-  get outputLayer() {
+  get outputLayer(): Layer {
     return this.layers[this.𝐋]
   }
 
   /** Total number of trainable parameters across the layers. */
-  get parameterCount() {
+  get parameterCount(): number {
     return this.layers.reduce((count, layer) => count + layer.parameterCount, 0)
   }
 
   /**
    * The layer feeding into layer 𝓁.
    *
+   * @param 𝓁 Index of the layer whose predecessor is wanted.
+   * @returns The layer at 𝓁 - 1.
    * @throws If 𝓁 is 0, the input layer having no predecessor.
    */
-  previousLayer(𝓁: number) {
+  previousLayer(𝓁: number): Layer {
     if (𝓁 === 0) throw new Error('Input layer does not have a previous one')
 
     return this.layers[𝓁 - 1]
@@ -107,9 +110,11 @@ export class Network {
   /**
    * The layer fed by layer 𝓁.
    *
+   * @param 𝓁 Index of the layer whose successor is wanted.
+   * @returns The layer at 𝓁 + 1.
    * @throws If 𝓁 is 𝐋, the output layer having no successor.
    */
-  nextLayer(𝓁: number) {
+  nextLayer(𝓁: number): Layer {
     if (𝓁 === this.𝐋) throw new Error('Output layer does not have a next one')
 
     return this.layers[𝓁 + 1]
@@ -121,9 +126,10 @@ export class Network {
    *
    * @param inputs One value per input neuron, expected normalized to [0, 1].
    * @param label The digit the image depicts, 0-9.
+   * @returns Nothing; the sample is stored on the network.
    * @throws If `inputs` is not the input layer's size.
    */
-  loadSample(inputs: NumericVector, label: number) {
+  loadSample(inputs: NumericVector, label: number): void {
     if (inputs.length !== this.inputLayer.size)
       throw new Error(
         `Expected input size of ${this.inputLayer.size} but got ${inputs.length}`,
@@ -134,8 +140,12 @@ export class Network {
     this.y = timesMap(MNIST_OUTPUT_SIZE, i => (i === label ? 1 : 0))
   }
 
-  /** Forward pass: recompute a and z from the input layer up to the output layer. */
-  feedForward() {
+  /**
+   * Forward pass: recompute a and z from the input layer up to the output layer.
+   *
+   * @returns Nothing; each layer's state is updated in place.
+   */
+  feedForward(): void {
     for (let 𝓁 = 1; 𝓁 <= this.𝐋; 𝓁++)
       this.layers[𝓁].calculatePostActivationValues()
   }
@@ -156,12 +166,16 @@ export class Network {
   }
 
   /** Index of the output layer, which is also how many layers are trainable. */
-  get 𝐋() {
+  get 𝐋(): number {
     return this.layers.length - 1
   }
 
-  /** The digit the network currently predicts, given a prior forward pass. */
-  predictedDigit() {
+  /**
+   * The digit the network currently predicts, given a prior forward pass.
+   *
+   * @returns The index of the highest activation, 0-9.
+   */
+  predictedDigit(): number {
     const predictedDigitProbability = Math.max(...this.outputLayer.a)
 
     return this.outputLayer.a.findIndex(
@@ -183,7 +197,7 @@ export class Network {
    * @returns One {@link GradientLayer} per trainable layer, output layer first.
    * @throws If a layer is missing its activation function, needed for σ'.
    */
-  calculateGradient() {
+  calculateGradient(): Gradient {
     const gradient: Gradient = []
 
     for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
@@ -247,10 +261,13 @@ export class Network {
    * Entries are matched to layers by their own 𝓁, so a per-sample gradient
    * gives an SGD step and a batch mean gives a mini-batch step.
    *
+   * @param gradient The gradients to step against, as returned by
+   * {@link Network.calculateGradient} or its average.
+   * @returns Nothing; each layer's parameters are updated in place.
    * @throws If an entry's 𝓁 is not a layer of this network, or if a gradient
    * shape does not line up with the parameters it is applied to.
    */
-  backPropagate(gradient: Gradient) {
+  backPropagate(gradient: Gradient): void {
     for (const { 𝓁, b, w } of gradient) {
       const layer = this.layers[𝓁]
       if (!layer) throw new Error(`Layer ${𝓁} not found`)
