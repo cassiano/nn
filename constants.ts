@@ -43,5 +43,5 @@ export type TrainingConfig = {
  */
 export const TRAINING_CONFIG: Record<DatasetChoice, TrainingConfig> = {
   digits: { epochs: 30, learningRate: 0.002, batchSize: 60 },
-  animal: { epochs: 225, learningRate: 0.0035, batchSize: 8 },
+  animal: { epochs: 225, learningRate: 0.00375, batchSize: 8 },
 }
