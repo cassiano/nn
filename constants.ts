@@ -13,6 +13,6 @@ export const NETWORK_LAYER_CONFIG: InitialLayerData[] = [
   { name: 'Output Layer', size: 10, σ: 'softmax' },
 ]
 
-export const EPOCHS = 5
+export const EPOCHS = 30
 export const NETWORK_LEARNING_RATE = 0.002 // η, the learning rate
 export const BATCH_SIZE = 60
