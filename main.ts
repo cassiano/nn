@@ -114,7 +114,7 @@ const main = async () => {
 
     if ((testImageIdx + 1) % 1000 === 0)
       console.log({
-        i: testImageIdx,
+        testImageIdx,
         expected: testLabels[testImageIdx],
         predictedDigit,
         cost: network.cost,
