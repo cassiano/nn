@@ -303,8 +303,12 @@ export const toMatrix = (vector: NumericVector): NumericMatrix =>
  * @param matrix The one-column matrix to read.
  * @returns One value per row, in order.
  */
-export const fromMatrix = (matrix: NumericMatrix): NumericVector =>
-  matrix.map(row => row[0])
+export const fromMatrix = (matrix: NumericMatrix): NumericVector => {
+  if (matrix[0]?.length !== 1)
+    throw new Error('Expected a single-column matrix')
+
+  return matrix.map(row => row[0])
+}
 
 /**
  * Element-wise matrix addition.
@@ -570,8 +574,7 @@ export const shuffle = <T>(array: T[]): void => {
 export const formatPercentageWithDecimalPlaces = (
   value: number,
   decimalPlaces: number,
-): number =>
-  Math.round(value * 100 * 10 ** decimalPlaces) / 10 ** decimalPlaces
+): number => Math.round(value * 100 * 10 ** decimalPlaces) / 10 ** decimalPlaces
 
 /**
  * Flattens every layer of a gradient into a single vector, so all of a
