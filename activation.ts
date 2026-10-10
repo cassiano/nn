@@ -85,11 +85,13 @@ export function tanhDerivative(x: number): number {
  * `Math.exp` from overflowing.
  *
  * @param logits The layer's pre-activation values, one per neuron.
+ * @param temperature A scaling factor for the logits, where 1 is normal. Higher
+ * temperatures flatten the distribution, lower ones sharpen it.
  * @returns One probability per neuron, summing to 1.
  */
-export function softmax(logits: NumericVector): NumericVector {
+export function softmax(logits: NumericVector, temperature = 1): NumericVector {
   const max = Math.max(...logits)
-  const exps = logits.map(v => Math.exp(v - max))
+  const exps = logits.map(v => Math.exp((v - max) / temperature))
   const sum = exps.reduce((a, b) => a + b, 0)
 
   return exps.map(e => e / sum)
