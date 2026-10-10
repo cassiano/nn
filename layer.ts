@@ -1,10 +1,9 @@
 import { NumericVector, NumericMatrix } from './types.ts'
 import { Network } from './network.ts'
-import { createVector } from './utils.ts'
+import { addVectors, createVector } from './utils.ts'
 import {
   random,
-  fromMatrix,
-  addMatrices,
+  toVector,
   multiplyMatrices,
   toMatrix,
   createMatrix,
@@ -159,11 +158,9 @@ export class Layer {
    * @throws If w, b and the previous layer's `a` disagree on their dimensions.
    */
   private calculatePreActivationValues(): void {
-    this.z = fromMatrix(
-      addMatrices(
-        multiplyMatrices(this.w, toMatrix(this.previousLayer.a)),
-        toMatrix(this.b),
-      ),
+    this.z = addVectors(
+      toVector(multiplyMatrices(this.w, toMatrix(this.previousLayer.a))),
+      this.b,
     )
   }
 

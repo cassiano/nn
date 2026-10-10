@@ -303,7 +303,9 @@ export const toMatrix = (vector: NumericVector): NumericMatrix =>
  * @param matrix The one-column matrix to read.
  * @returns One value per row, in order.
  */
-export const fromMatrix = (matrix: NumericMatrix): NumericVector => {
+export const toVector = (matrix: NumericMatrix): NumericVector => {
+  if (matrix.length === 0) return []
+
   if (matrix[0]?.length !== 1)
     throw new Error('Expected a single-column matrix')
 

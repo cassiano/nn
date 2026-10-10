@@ -12,7 +12,7 @@ import {
   createMatrix,
   createVector,
   toMatrix,
-  fromMatrix,
+  toVector,
   addMatrices,
   addVectors,
   multiplyMatrices,
@@ -249,13 +249,13 @@ Deno.test('toMatrix / an empty vector yields an empty matrix', () => {
   assertEquals(toMatrix([]), [])
 })
 
-Deno.test('fromMatrix / is the inverse of toMatrix', () => {
-  assertEquals(fromMatrix([[1], [2], [3]]), [1, 2, 3])
-  assertEquals(fromMatrix(toMatrix([4, 5, 6])), [4, 5, 6])
+Deno.test('toVector / is the inverse of toMatrix', () => {
+  assertEquals(toVector([[1], [2], [3]]), [1, 2, 3])
+  assertEquals(toVector(toMatrix([4, 5, 6])), [4, 5, 6])
 })
 
-Deno.test('fromMatrix / an empty matrix yields an empty vector', () => {
-  assertEquals(fromMatrix([]), [])
+Deno.test('toVector / an empty matrix yields an empty vector', () => {
+  assertEquals(toVector([]), [])
 })
 
 Deno.test('addMatrices / sums element-wise', () => {

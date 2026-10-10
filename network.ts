@@ -3,7 +3,7 @@ import {
   transposeMatrix,
   multiplyMatrices,
   toMatrix,
-  fromMatrix,
+  toVector,
   addMatrices,
   multiplyMatrixByScalar,
   addVectors,
@@ -218,7 +218,7 @@ export class Network {
       } else {
         assertIsNotUndefined(nextLayer)
 
-        costByActivationDerivatives = fromMatrix(
+        costByActivationDerivatives = toVector(
           multiplyMatrices(transposeMatrix(nextLayer.w), toMatrix(nextLayer.δ)),
         )
       }
