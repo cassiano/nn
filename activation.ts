@@ -84,13 +84,30 @@ export function tanhDerivative(x: number): number {
  * The max logit is subtracted first — it cancels out of the ratio but keeps
  * `Math.exp` from overflowing.
  *
+ * A temperature of 0 is not representable by the formula but is the limit in
+ * which the distribution becomes one-hot on the largest logit(s), so it is
+ * handled explicitly; ties split the mass evenly.
+ *
  * @param logits The layer's pre-activation values, one per neuron.
  * @param temperature A scaling factor for the logits, where 1 is normal. Higher
- * temperatures flatten the distribution, lower ones sharpen it.
+ * temperatures flatten the distribution, lower ones sharpen it. Must be
+ * non-negative; 0 yields a one-hot argmax distribution.
  * @returns One probability per neuron, summing to 1.
  */
 export function softmax(logits: NumericVector, temperature = 1): NumericVector {
+  if (temperature < 0) {
+    throw new Error('Softmax temperature must be non-negative')
+  }
+
   const max = Math.max(...logits)
+
+  if (temperature === 0) {
+    const winners = logits.filter(v => v === max).length
+    const share = 1 / winners
+
+    return logits.map(v => (v === max ? share : 0))
+  }
+
   const exps = logits.map(v => Math.exp((v - max) / temperature))
   const sum = exps.reduce((a, b) => a + b, 0)
 

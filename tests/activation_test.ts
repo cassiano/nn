@@ -7,7 +7,13 @@ import {
   tanhDerivative,
   softmax,
 } from '../activation.ts'
-import { assert, assertEquals, assertClose, assertArrayClose } from './test_helpers.ts'
+import {
+  assert,
+  assertEquals,
+  assertClose,
+  assertArrayClose,
+  assertThrows,
+} from './test_helpers.ts'
 
 Deno.test('relu / passes positives through, zeroes negatives and zero', () => {
   assertEquals(relu(3), 3)
@@ -81,6 +87,16 @@ Deno.test('softmax / is invariant to a constant offset', () => {
 
 Deno.test('softmax / single-element input maps to 1', () => {
   assertArrayClose(softmax([7]), [1], 1e-9)
+})
+
+Deno.test('softmax / zero temperature yields a one-hot argmax distribution', () => {
+  assertArrayClose(softmax([1, 5, 2], 0), [0, 1, 0], 1e-9)
+  // Ties split the mass evenly.
+  assertArrayClose(softmax([3, 1, 3], 0), [0.5, 0, 0.5], 1e-9)
+})
+
+Deno.test('softmax / rejects a negative temperature', () => {
+  assertThrows(() => softmax([1, 2, 3], -1), 'non-negative')
 })
 
 Deno.test('activation derivatives / agree with finite differences', () => {
