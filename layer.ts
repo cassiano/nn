@@ -3,9 +3,9 @@ import { Network } from './network.ts'
 import { addVectors, createVector } from './utils.ts'
 import {
   random,
-  toVector,
+  matrix2Vector,
   multiplyMatrices,
-  toMatrix,
+  vector2Matrix,
   createMatrix,
 } from './utils.ts'
 import {
@@ -159,7 +159,9 @@ export class Layer {
    */
   private calculatePreActivationValues(): void {
     this.z = addVectors(
-      toVector(multiplyMatrices(this.w, toMatrix(this.previousLayer.a))),
+      matrix2Vector(
+        multiplyMatrices(this.w, vector2Matrix(this.previousLayer.a)),
+      ),
       this.b,
     )
   }

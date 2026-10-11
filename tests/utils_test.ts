@@ -11,8 +11,8 @@ import {
   assertIsNotUndefinedOrNull,
   createMatrix,
   createVector,
-  toMatrix,
-  toVector,
+  vector2Matrix,
+  matrix2Vector,
   addMatrices,
   addVectors,
   multiplyMatrices,
@@ -241,21 +241,21 @@ Deno.test('assertIsNotUndefinedOrNull / rejects both empty values', () => {
   assertIsNotUndefinedOrNull(3)
 })
 
-Deno.test('toMatrix / flattens a vector into a column matrix', () => {
-  assertEquals(toMatrix([1, 2, 3]), [[1], [2], [3]])
+Deno.test('vector2Matrix / flattens a vector into a column matrix', () => {
+  assertEquals(vector2Matrix([1, 2, 3]), [[1], [2], [3]])
 })
 
-Deno.test('toMatrix / an empty vector yields an empty matrix', () => {
-  assertEquals(toMatrix([]), [])
+Deno.test('vector2Matrix / an empty vector yields an empty matrix', () => {
+  assertEquals(vector2Matrix([]), [])
 })
 
-Deno.test('toVector / is the inverse of toMatrix', () => {
-  assertEquals(toVector([[1], [2], [3]]), [1, 2, 3])
-  assertEquals(toVector(toMatrix([4, 5, 6])), [4, 5, 6])
+Deno.test('matrix2Vector / is the inverse of vector2Matrix', () => {
+  assertEquals(matrix2Vector([[1], [2], [3]]), [1, 2, 3])
+  assertEquals(matrix2Vector(vector2Matrix([4, 5, 6])), [4, 5, 6])
 })
 
-Deno.test('toVector / an empty matrix yields an empty vector', () => {
-  assertEquals(toVector([]), [])
+Deno.test('matrix2Vector / an empty matrix yields an empty vector', () => {
+  assertEquals(matrix2Vector([]), [])
 })
 
 Deno.test('addMatrices / sums element-wise', () => {
@@ -391,14 +391,20 @@ Deno.test(
 
     // [a]x[b]ᵀ
     assertEquals(
-      multiplyMatrices(toMatrix(vectorA), transposeMatrix(toMatrix(vectorB))),
+      multiplyMatrices(
+        vector2Matrix(vectorA),
+        transposeMatrix(vector2Matrix(vectorB)),
+      ),
       resultingMatrix,
     )
 
     // ([b]x[a]ᵀ)ᵀ
     assertEquals(
       transposeMatrix(
-        multiplyMatrices(toMatrix(vectorB), transposeMatrix(toMatrix(vectorA))),
+        multiplyMatrices(
+          vector2Matrix(vectorB),
+          transposeMatrix(vector2Matrix(vectorA)),
+        ),
       ),
       resultingMatrix,
     )

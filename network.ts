@@ -2,8 +2,8 @@ import {
   timesMap,
   transposeMatrix,
   multiplyMatrices,
-  toMatrix,
-  toVector,
+  vector2Matrix,
+  matrix2Vector,
   addMatrices,
   multiplyMatrixByScalar,
   addVectors,
@@ -218,8 +218,11 @@ export class Network {
       } else {
         assertIsNotUndefined(nextLayer)
 
-        costByActivationDerivatives = toVector(
-          multiplyMatrices(transposeMatrix(nextLayer.w), toMatrix(nextLayer.δ)),
+        costByActivationDerivatives = matrix2Vector(
+          multiplyMatrices(
+            transposeMatrix(nextLayer.w),
+            vector2Matrix(nextLayer.δ),
+          ),
         )
       }
 
@@ -233,8 +236,8 @@ export class Network {
         𝓁,
         // [/doc_img/network.ts/2026-09-26-18-21-20.png]
         w: multiplyMatrices(
-          toMatrix(currentLayer.δ),
-          transposeMatrix(toMatrix(previousLayer.a)),
+          vector2Matrix(currentLayer.δ),
+          transposeMatrix(vector2Matrix(previousLayer.a)),
         ),
         // [/doc_img/network.ts/2026-09-26-18-21-43.png]
         b: [...currentLayer.δ],
