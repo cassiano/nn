@@ -95,9 +95,8 @@ export function tanhDerivative(x: number): number {
  * @returns One probability per neuron, summing to 1.
  */
 export function softmax(logits: NumericVector, temperature = 1): NumericVector {
-  if (temperature < 0) {
+  if (temperature < 0)
     throw new Error('Softmax temperature must be non-negative')
-  }
 
   const max = Math.max(...logits)
 
