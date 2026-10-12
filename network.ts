@@ -231,14 +231,10 @@ export class Network {
 
       const gradientlayer: GradientLayer = {
         𝓁,
-        // [/doc_img/network.ts/2026-09-26-18-21-20.png]
-        w: multiplyVectors(currentLayer.δ, previousLayer.a),
-        // [/doc_img/network.ts/2026-09-26-18-21-43.png]
-        b: [...currentLayer.δ],
+        w: multiplyVectors(currentLayer.δ, previousLayer.a), // [/doc_img/network.ts/2026-09-26-18-21-20.png]
+        b: [...currentLayer.δ], // [/doc_img/network.ts/2026-09-26-18-21-43.png]
       }
 
-      // Transposing the factors instead is equivalent; see the test in
-      // `tests/utils_test.ts` for the proof that both products match.
       gradient.push(gradientlayer)
     }
 
