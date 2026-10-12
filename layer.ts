@@ -1,13 +1,7 @@
 import { NumericVector, NumericMatrix } from './types.ts'
 import { Network } from './network.ts'
-import { addVectors, createVector } from './utils.ts'
-import {
-  random,
-  matrix2Vector,
-  multiplyMatrices,
-  vector2Matrix,
-  createMatrix,
-} from './utils.ts'
+import { addVectors, createVector, multiplyMatrixByVector } from './utils.ts'
+import { random, createMatrix } from './utils.ts'
 import {
   sigmoidDerivative,
   reluDerivative,
@@ -159,9 +153,7 @@ export class Layer {
    */
   private calculatePreActivationValues(): void {
     this.z = addVectors(
-      matrix2Vector(
-        multiplyMatrices(this.w, vector2Matrix(this.previousLayer.a)),
-      ),
+      multiplyMatrixByVector(this.w, this.previousLayer.a),
       this.b,
     )
   }

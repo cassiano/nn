@@ -397,6 +397,22 @@ export const multiplyMatrices = (
 }
 
 /**
+ * Applies a matrix to a vector, taking the dot product of each row with the
+ * vector — the linear step of a layer (`w · a`).
+ *
+ * @param matrix The matrix whose rows are each dotted with `vector`.
+ * @param vector The vector to multiply, of the same length as every row of
+ * `matrix`.
+ * @returns A new vector with one entry per row of `matrix`.
+ * @throws {Error} If any row of `matrix` and `vector` have different lengths,
+ * propagated from {@link dotProduct}.
+ */
+export const multiplyMatrixByVector = (
+  matrix: NumericMatrix,
+  vector: NumericVector,
+): NumericVector => matrix.map(row => dotProduct(row, vector))
+
+/**
  * Swaps a matrix's rows and columns, reflecting it along its main diagonal.
  *
  * @param matrix The matrix to reflect.
@@ -484,6 +500,32 @@ export const hadamardProduct = (
     )
 
   return left.map((leftValue, i) => leftValue * right[i])
+}
+
+/**
+ * The dot (inner) product of two vectors: the sum of their element-wise
+ * products.
+ *
+ * @param left The first operand.
+ * @param right The second operand, of the same length as `left`.
+ * @returns The scalar `Σ left[i] * right[i]`.
+ * @throws {Error} If the two vectors have different lengths, rather than
+ * silently multiplying over the shorter one.
+ */
+export const dotProduct = (
+  left: NumericVector,
+  right: NumericVector,
+): number => {
+  if (left.length !== right.length)
+    throw new Error(
+      `Size of left vector (${left.length}) must match size of right one (${right.length})`,
+    )
+
+  let sum = 0
+
+  for (let i = 0; i < left.length; i++) sum += left[i] * right[i]
+
+  return sum
 }
 
 /**

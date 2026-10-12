@@ -3,12 +3,12 @@ import {
   transposeMatrix,
   multiplyMatrices,
   vector2Matrix,
-  matrix2Vector,
   addMatrices,
   multiplyMatrixByScalar,
   addVectors,
   multiplyVectorByScalar,
   createMatrix,
+  multiplyMatrixByVector,
 } from './utils.ts'
 import {
   NumericVector,
@@ -218,11 +218,9 @@ export class Network {
       } else {
         assertIsNotUndefined(nextLayer)
 
-        costByActivationDerivatives = matrix2Vector(
-          multiplyMatrices(
-            transposeMatrix(nextLayer.w),
-            vector2Matrix(nextLayer.δ),
-          ),
+        costByActivationDerivatives = multiplyMatrixByVector(
+          transposeMatrix(nextLayer.w),
+          nextLayer.δ,
         )
       }
 

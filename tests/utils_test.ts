@@ -22,6 +22,8 @@ import {
   divideMatrixByScalar,
   divideVectorByScalar,
   hadamardProduct,
+  dotProduct,
+  multiplyMatrixByVector,
   random,
   shuffle,
   gradientAsVector,
@@ -511,6 +513,80 @@ Deno.test('hadamardProduct / is commutative', () => {
   assertEquals(
     hadamardProduct([1, 2, 3], [4, 5, 6]),
     hadamardProduct([4, 5, 6], [1, 2, 3]),
+  )
+})
+
+Deno.test('dotProduct / sums the element-wise products', () => {
+  assertEquals(dotProduct([1, 2, 3], [4, 5, 6]), 32)
+})
+
+Deno.test('dotProduct / of orthogonal vectors is zero', () => {
+  assertEquals(dotProduct([1, 0], [0, 1]), 0)
+})
+
+Deno.test('dotProduct / works with single-element vectors', () => {
+  assertEquals(dotProduct([3], [4]), 12)
+})
+
+Deno.test('dotProduct / empty vectors yield 0', () => {
+  assertEquals(dotProduct([], []), 0)
+})
+
+Deno.test('dotProduct / handles negative values', () => {
+  assertEquals(dotProduct([-1, 2], [3, -4]), -11)
+})
+
+Deno.test('dotProduct / throws when vector sizes differ', () => {
+  assertThrows(() => dotProduct([1, 2], [1, 2, 3]), 'must match')
+})
+
+Deno.test('multiplyMatrixByVector / dots each row with the vector', () => {
+  assertEquals(
+    multiplyMatrixByVector(
+      [
+        [1, 2],
+        [3, 4],
+      ],
+      [5, 6],
+    ),
+    [17, 39],
+  )
+})
+
+Deno.test('multiplyMatrixByVector / handles rectangular matrices', () => {
+  assertEquals(
+    multiplyMatrixByVector(
+      [
+        [1, 2, 3],
+        [4, 5, 6],
+      ],
+      [1, 0, -1],
+    ),
+    [-2, -2],
+  )
+})
+
+Deno.test('multiplyMatrixByVector / with identity returns the vector', () => {
+  assertEquals(
+    multiplyMatrixByVector(
+      [
+        [1, 0],
+        [0, 1],
+      ],
+      [7, 8],
+    ),
+    [7, 8],
+  )
+})
+
+Deno.test('multiplyMatrixByVector / an empty matrix yields an empty vector', () => {
+  assertEquals(multiplyMatrixByVector([], []), [])
+})
+
+Deno.test('multiplyMatrixByVector / throws when row and vector sizes differ', () => {
+  assertThrows(
+    () => multiplyMatrixByVector([[1, 2, 3]], [1, 2]),
+    'must match',
   )
 })
 
