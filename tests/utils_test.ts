@@ -11,8 +11,6 @@ import {
   assertIsNotUndefinedOrNull,
   createMatrix,
   createVector,
-  vector2Matrix,
-  matrix2Vector,
   addMatrices,
   addVectors,
   multiplyMatrices,
@@ -24,6 +22,7 @@ import {
   hadamardProduct,
   dotProduct,
   multiplyMatrixByVector,
+  multiplyVectors,
   random,
   shuffle,
   gradientAsVector,
@@ -243,23 +242,6 @@ Deno.test('assertIsNotUndefinedOrNull / rejects both empty values', () => {
   assertIsNotUndefinedOrNull(3)
 })
 
-Deno.test('vector2Matrix / flattens a vector into a column matrix', () => {
-  assertEquals(vector2Matrix([1, 2, 3]), [[1], [2], [3]])
-})
-
-Deno.test('vector2Matrix / an empty vector yields an empty matrix', () => {
-  assertEquals(vector2Matrix([]), [])
-})
-
-Deno.test('matrix2Vector / is the inverse of vector2Matrix', () => {
-  assertEquals(matrix2Vector([[1], [2], [3]]), [1, 2, 3])
-  assertEquals(matrix2Vector(vector2Matrix([4, 5, 6])), [4, 5, 6])
-})
-
-Deno.test('matrix2Vector / an empty matrix yields an empty vector', () => {
-  assertEquals(matrix2Vector([]), [])
-})
-
 Deno.test('addMatrices / sums element-wise', () => {
   assertEquals(
     addMatrices(
@@ -379,39 +361,6 @@ Deno.test('multiplyMatrices / handles negative values', () => {
 Deno.test('multiplyMatrices / throws when inner dimensions differ', () => {
   assertThrows(() => multiplyMatrices([[1, 2]], [[1, 2]]), 'must match')
 })
-
-Deno.test(
-  'multiplyMatrices / multiplying 2 vectors a and b (as matrixes) like [a]x[b]ᵀ and ([b]x[a]ᵀ)ᵀ gives the same resulting matrix',
-  () => {
-    const vectorA = [2, 3, 4]
-    const vectorB = [10, 20, 30, 40]
-    const resultingMatrix = [
-      [20, 40, 60, 80],
-      [30, 60, 90, 120],
-      [40, 80, 120, 160],
-    ]
-
-    // [a]x[b]ᵀ
-    assertEquals(
-      multiplyMatrices(
-        vector2Matrix(vectorA),
-        transposeMatrix(vector2Matrix(vectorB)),
-      ),
-      resultingMatrix,
-    )
-
-    // ([b]x[a]ᵀ)ᵀ
-    assertEquals(
-      transposeMatrix(
-        multiplyMatrices(
-          vector2Matrix(vectorB),
-          transposeMatrix(vector2Matrix(vectorA)),
-        ),
-      ),
-      resultingMatrix,
-    )
-  },
-)
 
 Deno.test('transposeMatrix / swaps rows and columns', () => {
   assertEquals(
@@ -579,16 +528,70 @@ Deno.test('multiplyMatrixByVector / with identity returns the vector', () => {
   )
 })
 
-Deno.test('multiplyMatrixByVector / an empty matrix yields an empty vector', () => {
-  assertEquals(multiplyMatrixByVector([], []), [])
+Deno.test(
+  'multiplyMatrixByVector / an empty matrix yields an empty vector',
+  () => {
+    assertEquals(multiplyMatrixByVector([], []), [])
+  },
+)
+
+Deno.test(
+  'multiplyMatrixByVector / throws when row and vector sizes differ',
+  () => {
+    assertThrows(
+      () => multiplyMatrixByVector([[1, 2, 3]], [1, 2]),
+      'must match',
+    )
+  },
+)
+
+Deno.test('multiplyVectors / builds the outer product', () => {
+  assertEquals(multiplyVectors([1, 2], [3, 4]), [
+    [3, 4],
+    [6, 8],
+  ])
 })
 
-Deno.test('multiplyMatrixByVector / throws when row and vector sizes differ', () => {
-  assertThrows(
-    () => multiplyMatrixByVector([[1, 2, 3]], [1, 2]),
-    'must match',
-  )
+Deno.test('multiplyVectors / supports vectors of different lengths', () => {
+  assertEquals(multiplyVectors([1, 2, 3], [10]), [
+    [10],
+    [20],
+    [30],
+  ])
+  assertEquals(multiplyVectors([5], [1, 2]), [
+    [5, 10],
+  ])
 })
+
+Deno.test('multiplyVectors / handles negative values', () => {
+  assertEquals(multiplyVectors([-1, 2], [3, -4]), [
+    [-3, 4],
+    [6, -8],
+  ])
+})
+
+Deno.test('multiplyVectors / single entries multiply like scalars', () => {
+  assertEquals(multiplyVectors([7], [8]), [
+    [56],
+  ])
+})
+
+Deno.test('multiplyVectors / an empty left vector yields an empty matrix', () => {
+  assertEquals(multiplyVectors([], [1, 2]), [])
+})
+
+Deno.test('multiplyVectors / an empty right vector yields empty rows', () => {
+  assertEquals(multiplyVectors([1, 2], []), [[], []])
+})
+
+Deno.test(
+  'multiplyVectors / the row length matches left, column length matches right',
+  () => {
+    const result = multiplyVectors([1, 2, 3], [4, 5])
+    assertEquals(result.length, 3)
+    for (const row of result) assertEquals(row.length, 2)
+  },
+)
 
 Deno.test('random / stays within the default [0, 1) range', () => {
   for (let i = 0; i < 1000; i++) {

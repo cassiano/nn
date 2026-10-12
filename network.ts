@@ -1,14 +1,13 @@
 import {
   timesMap,
   transposeMatrix,
-  multiplyMatrices,
-  vector2Matrix,
   addMatrices,
   multiplyMatrixByScalar,
   addVectors,
   multiplyVectorByScalar,
   createMatrix,
   multiplyMatrixByVector,
+  multiplyVectors,
 } from './utils.ts'
 import {
   NumericVector,
@@ -233,10 +232,7 @@ export class Network {
       const gradientlayer: GradientLayer = {
         𝓁,
         // [/doc_img/network.ts/2026-09-26-18-21-20.png]
-        w: multiplyMatrices(
-          vector2Matrix(currentLayer.δ),
-          transposeMatrix(vector2Matrix(previousLayer.a)),
-        ),
+        w: multiplyVectors(currentLayer.δ, previousLayer.a),
         // [/doc_img/network.ts/2026-09-26-18-21-43.png]
         b: [...currentLayer.δ],
       }

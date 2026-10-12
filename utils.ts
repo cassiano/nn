@@ -289,30 +289,6 @@ export const createVector = (
 }
 
 /**
- * Wraps a vector as a single-column matrix, so it can join matrix operations.
- *
- * @param vector The values to wrap, one per row.
- * @returns A one-column matrix holding the same values.
- */
-export const vector2Matrix = (vector: NumericVector): NumericMatrix =>
-  vector.map(value => [value])
-
-/**
- * Unpacks a single-column matrix back into a vector.
- *
- * @param matrix The one-column matrix to read.
- * @returns One value per row, in order.
- */
-export const matrix2Vector = (matrix: NumericMatrix): NumericVector => {
-  if (matrix.length === 0) return []
-
-  if (matrix[0]?.length !== 1)
-    throw new Error('Expected a single-column matrix')
-
-  return matrix.map(row => row[0])
-}
-
-/**
  * Element-wise matrix addition.
  *
  * @param left The first operand.
@@ -324,29 +300,29 @@ export const addMatrices = (
   left: NumericMatrix,
   right: NumericMatrix,
 ): NumericMatrix => {
-  const rowsLeft = left.length
-  const colsLeft = left[0]?.length ?? 0
-  const rowsRight = right.length
-  const colsRight = right[0]?.length ?? 0
+  const leftRows = left.length
+  const leftCols = left[0]?.length ?? 0
+  const rightRows = right.length
+  const rightCols = right[0]?.length ?? 0
 
-  if (colsLeft !== colsRight)
+  if (leftCols !== rightCols)
     throw new Error(
-      `Number of columns from left matrix (${colsLeft}) must match number of columns from right one (${colsRight})`,
+      `Number of columns from left matrix (${leftCols}) must match number of columns from right one (${rightCols})`,
     )
 
-  if (rowsLeft !== rowsRight)
+  if (leftRows !== rightRows)
     throw new Error(
-      `Number of rows from left matrix (${rowsLeft}) must match number of rows from right one (${rowsRight})`,
+      `Number of rows from left matrix (${leftRows}) must match number of rows from right one (${rightRows})`,
     )
 
-  const result: NumericMatrix = new Array(rowsLeft)
+  const result: NumericMatrix = new Array(leftRows)
 
-  for (let row = 0; row < rowsLeft; row++) {
+  for (let row = 0; row < leftRows; row++) {
     const leftRow = left[row]
     const rightRow = right[row]
-    const resultRow: NumericVector = (result[row] = new Array(colsLeft))
+    const resultRow: NumericVector = (result[row] = new Array(leftCols))
 
-    for (let col = 0; col < colsLeft; col++)
+    for (let col = 0; col < leftCols; col++)
       resultRow[col] = leftRow[col] + rightRow[col]
   }
 
@@ -366,28 +342,28 @@ export const multiplyMatrices = (
   left: NumericMatrix,
   right: NumericMatrix,
 ): NumericMatrix => {
-  const colsLeft = left[0].length
-  const colsRight = right[0].length
-  const rowsLeft = left.length
-  const rowsRight = right.length
+  const leftCols = left[0].length
+  const rightCols = right[0].length
+  const leftRows = left.length
+  const rightRows = right.length
 
-  if (colsLeft !== rowsRight)
+  if (leftCols !== rightRows)
     throw new Error(
-      `Number of columns from left matrix (${colsLeft}) must match number of rows from right one (${rowsRight})`,
+      `Number of columns from left matrix (${leftCols}) must match number of rows from right one (${rightRows})`,
     )
 
-  const result: NumericMatrix = new Array(rowsLeft)
+  const result: NumericMatrix = new Array(leftRows)
 
   // Accumulating into a local keeps the inner loop down to one multiply and one
   // add per weight, instead of repeatedly re-reading nested array properties.
-  for (let row = 0; row < rowsLeft; row++) {
+  for (let row = 0; row < leftRows; row++) {
     const leftRow = left[row]
-    const resultRow: NumericVector = (result[row] = new Array(colsRight))
+    const resultRow: NumericVector = (result[row] = new Array(rightCols))
 
-    for (let col = 0; col < colsRight; col++) {
+    for (let col = 0; col < rightCols; col++) {
       let sum = 0
 
-      for (let i = 0; i < colsLeft; i++) sum += leftRow[i] * right[i][col]
+      for (let i = 0; i < leftCols; i++) sum += leftRow[i] * right[i][col]
 
       resultRow[col] = sum
     }
@@ -526,6 +502,34 @@ export const dotProduct = (
   for (let i = 0; i < left.length; i++) sum += left[i] * right[i]
 
   return sum
+}
+
+/**
+ * The outer product of two vectors: an `left.length` x `right.length` matrix
+ * whose `(i, j)` entry is `left[i] * right[j]`. Used to build a layer's weight
+ * gradient from the output error δ and the previous activations.
+ *
+ * @param left The first operand, supplying the matrix's rows.
+ * @param right The second operand, supplying the matrix's columns. May have a
+ * different length from `left`; no size check is needed.
+ * @returns A new matrix with one row per entry of `left` and one column per
+ * entry of `right`.
+ */
+export const multiplyVectors = (
+  left: NumericVector,
+  right: NumericVector,
+): NumericMatrix => {
+  const result: NumericMatrix = new Array(left.length)
+
+  for (let row = 0; row < left.length; row++) {
+    const leftRow = left[row]
+    const resultRow: NumericVector = (result[row] = new Array(right.length))
+
+    for (let col = 0; col < right.length; col++)
+      resultRow[col] = leftRow * right[col]
+  }
+
+  return result
 }
 
 /**
