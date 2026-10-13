@@ -22,7 +22,7 @@ import {
   hadamardProduct,
   dotProduct,
   multiplyMatrixByVector,
-  multiplyVectors,
+  outerProduct,
   random,
   shuffle,
   gradientAsVector,
@@ -545,49 +545,49 @@ Deno.test(
   },
 )
 
-Deno.test('multiplyVectors / builds the outer product', () => {
-  assertEquals(multiplyVectors([1, 2], [3, 4]), [
+Deno.test('outerProduct / builds the outer product', () => {
+  assertEquals(outerProduct([1, 2], [3, 4]), [
     [3, 4],
     [6, 8],
   ])
 })
 
-Deno.test('multiplyVectors / supports vectors of different lengths', () => {
-  assertEquals(multiplyVectors([1, 2, 3], [10]), [
+Deno.test('outerProduct / supports vectors of different lengths', () => {
+  assertEquals(outerProduct([1, 2, 3], [10]), [
     [10],
     [20],
     [30],
   ])
-  assertEquals(multiplyVectors([5], [1, 2]), [
+  assertEquals(outerProduct([5], [1, 2]), [
     [5, 10],
   ])
 })
 
-Deno.test('multiplyVectors / handles negative values', () => {
-  assertEquals(multiplyVectors([-1, 2], [3, -4]), [
+Deno.test('outerProduct / handles negative values', () => {
+  assertEquals(outerProduct([-1, 2], [3, -4]), [
     [-3, 4],
     [6, -8],
   ])
 })
 
-Deno.test('multiplyVectors / single entries multiply like scalars', () => {
-  assertEquals(multiplyVectors([7], [8]), [
+Deno.test('outerProduct / single entries multiply like scalars', () => {
+  assertEquals(outerProduct([7], [8]), [
     [56],
   ])
 })
 
-Deno.test('multiplyVectors / an empty left vector yields an empty matrix', () => {
-  assertEquals(multiplyVectors([], [1, 2]), [])
+Deno.test('outerProduct / an empty left vector yields an empty matrix', () => {
+  assertEquals(outerProduct([], [1, 2]), [])
 })
 
-Deno.test('multiplyVectors / an empty right vector yields empty rows', () => {
-  assertEquals(multiplyVectors([1, 2], []), [[], []])
+Deno.test('outerProduct / an empty right vector yields empty rows', () => {
+  assertEquals(outerProduct([1, 2], []), [[], []])
 })
 
 Deno.test(
-  'multiplyVectors / the row length matches left, column length matches right',
+  'outerProduct / the row length matches left, column length matches right',
   () => {
-    const result = multiplyVectors([1, 2, 3], [4, 5])
+    const result = outerProduct([1, 2, 3], [4, 5])
     assertEquals(result.length, 3)
     for (const row of result) assertEquals(row.length, 2)
   },

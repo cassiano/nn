@@ -513,7 +513,7 @@ export const dotProduct = (
  * @returns A new matrix with one row per entry of `left` and one column per
  * entry of `right`.
  */
-export const multiplyVectors = (
+export const outerProduct = (
   left: NumericVector,
   right: NumericVector,
 ): NumericMatrix => {
