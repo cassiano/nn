@@ -41,7 +41,7 @@ memory; `--allow-read` grants access to the `./data` directory.
 ### Running the tests
 
 ```sh
-deno test --allow-read   # 169 tests across the whole suite
+deno test --allow-read   # 184 tests across the whole suite
 deno lint               # type-lint the source and the tests
 ```
 
@@ -61,7 +61,7 @@ network harnesses).
 ├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, Gradient, …)
 ├── utils.ts          # Loop helpers, matrix ops, random, shuffle, assertions
 ├── constants.ts      # Hyperparameters and the network topology
-├── tests/            # Automated test suite (169 tests) + shared test helpers
+├── tests/            # Automated test suite (184 tests) + shared test helpers
 ├── doc_img/          # Screenshots/diagrams referenced from the source comments
 ├── tsconfig.json     # TS configuration (bundler-style, strict)
 └── data/mnist/       # The four zipped MNIST data files
