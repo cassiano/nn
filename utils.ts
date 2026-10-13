@@ -354,8 +354,6 @@ export const multiplyMatrices = (
 
   const result: NumericMatrix = new Array(leftRows)
 
-  // Accumulating into a local keeps the inner loop down to one multiply and one
-  // add per weight, instead of repeatedly re-reading nested array properties.
   for (let row = 0; row < leftRows; row++) {
     const leftRow = left[row]
     const resultRow: NumericVector = (result[row] = new Array(rightCols))
