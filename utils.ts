@@ -563,9 +563,7 @@ export const addVectors = (
 export const multiplyVectorByScalar = (
   vector: NumericVector,
   scalar: number,
-): NumericVector => {
-  return vector.map(value => value * scalar)
-}
+): NumericVector => vector.map(value => value * scalar)
 
 /**
  * Divides every entry of a vector by a scalar.
