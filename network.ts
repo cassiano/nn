@@ -16,12 +16,7 @@ import {
   Gradient,
 } from './types.ts'
 import { Layer } from './layer.ts'
-import {
-  hadamardProduct,
-  createVector,
-  divideMatrixByScalar,
-  assertIsNotUndefined,
-} from './utils.ts'
+import { hadamardProduct, createVector, divideMatrixByScalar } from './utils.ts'
 import { BATCH_SIZE } from './constants.ts'
 import { divideVectorByScalar, timesForEach } from './utils.ts'
 import {
@@ -201,9 +196,8 @@ export class Network {
 
     for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
       const layer = this.layers[𝓁]
-      const previousLayer = layer.previousLayer
-      const nextLayer = !layer.isOutputLayer ? layer.nextLayer : undefined
       const σDerivatives: NumericVector = layer.z.map(layer.σDerivativeFn)
+
       let costByActivationDerivatives: NumericVector // ∂C/∂a
 
       if (layer.isOutputLayer) {
@@ -211,7 +205,7 @@ export class Network {
           (activationValue, i) => 2 * (activationValue - this.y[i]),
         )
       } else {
-        assertIsNotUndefined(nextLayer)
+        const nextLayer = layer.nextLayer
 
         costByActivationDerivatives = multiplyMatrixByVector(
           transposeMatrix(nextLayer.w),
@@ -224,7 +218,7 @@ export class Network {
 
       const gradientlayer: GradientLayer = {
         𝓁,
-        w: outerProduct(layer.δ, previousLayer.a), // [/doc_img/network.ts/2026-09-26-18-21-20.png]
+        w: outerProduct(layer.δ, layer.previousLayer.a), // [/doc_img/network.ts/2026-09-26-18-21-20.png]
         b: [...layer.δ], // [/doc_img/network.ts/2026-09-26-18-21-43.png]
       }
 
