@@ -200,18 +200,14 @@ export class Network {
     const gradient: Gradient = []
 
     for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
-      const currentLayer = this.layers[𝓁]
-      const previousLayer = this.previousLayer(𝓁)
-      const nextLayer = !currentLayer.isOutputLayer
-        ? this.nextLayer(𝓁)
-        : undefined
-      const σDerivatives: NumericVector = currentLayer.z.map(
-        currentLayer.σDerivativeFn,
-      )
+      const layer = this.layers[𝓁]
+      const previousLayer = layer.previousLayer
+      const nextLayer = !layer.isOutputLayer ? layer.nextLayer : undefined
+      const σDerivatives: NumericVector = layer.z.map(layer.σDerivativeFn)
       let costByActivationDerivatives: NumericVector // ∂C/∂a
 
-      if (currentLayer.isOutputLayer) {
-        costByActivationDerivatives = currentLayer.a.map(
+      if (layer.isOutputLayer) {
+        costByActivationDerivatives = layer.a.map(
           (activationValue, i) => 2 * (activationValue - this.y[i]),
         )
       } else {
@@ -224,15 +220,12 @@ export class Network {
       }
 
       // [/doc_img/network.ts/2026-09-26-18-25-14.png]
-      currentLayer.δ = hadamardProduct(
-        costByActivationDerivatives,
-        σDerivatives,
-      )
+      layer.δ = hadamardProduct(costByActivationDerivatives, σDerivatives)
 
       const gradientlayer: GradientLayer = {
         𝓁,
-        w: outerProduct(currentLayer.δ, previousLayer.a), // [/doc_img/network.ts/2026-09-26-18-21-20.png]
-        b: [...currentLayer.δ], // [/doc_img/network.ts/2026-09-26-18-21-43.png]
+        w: outerProduct(layer.δ, previousLayer.a), // [/doc_img/network.ts/2026-09-26-18-21-20.png]
+        b: [...layer.δ], // [/doc_img/network.ts/2026-09-26-18-21-43.png]
       }
 
       gradient.push(gradientlayer)
@@ -263,7 +256,6 @@ export class Network {
   backPropagate(gradient: Gradient): void {
     for (const { 𝓁, b, w } of gradient) {
       const layer = this.layers[𝓁]
-      if (!layer) throw new Error(`Layer ${𝓁} not found`)
 
       layer.w = addMatrices(
         layer.w,
