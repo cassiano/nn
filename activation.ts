@@ -1,3 +1,7 @@
+///////////////////////
+// AI-generated code //
+///////////////////////
+
 import { NumericVector } from './types.ts'
 
 // Activation functions and their derivatives, applied by the layers and by

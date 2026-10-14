@@ -1,3 +1,7 @@
+///////////////////////
+// AI-generated code //
+///////////////////////
+
 import type { TrainingData } from './types.ts'
 import { map, timesForEachN, assertIsNotNull } from './utils.ts'
 import { NumericMatrix } from './types.ts'

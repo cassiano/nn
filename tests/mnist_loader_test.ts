@@ -1,3 +1,7 @@
+///////////////////////
+// AI-generated code //
+///////////////////////
+
 import {
   MnistLoader,
   MNIST_OUTPUT_SIZE,

@@ -1,3 +1,7 @@
+///////////////////////
+// AI-generated code //
+///////////////////////
+
 import {
   relu,
   reluDerivative,
@@ -63,7 +67,11 @@ Deno.test('tanhDerivative / equals 1 - tanh(x)^2', () => {
 Deno.test('softmax / produces a valid probability distribution', () => {
   const logits = [1, 2, 3, 4]
   const p = softmax(logits)
-  assertClose(p.reduce((sum, v) => sum + v, 0), 1, 1e-9)
+  assertClose(
+    p.reduce((sum, v) => sum + v, 0),
+    1,
+    1e-9,
+  )
   for (const v of p) assert(v > 0)
   // Largest logit maps to the largest probability (softmax is order-preserving).
   assertEquals(p.indexOf(Math.max(...p)), logits.indexOf(Math.max(...logits)))
@@ -89,11 +97,14 @@ Deno.test('softmax / single-element input maps to 1', () => {
   assertArrayClose(softmax([7]), [1], 1e-9)
 })
 
-Deno.test('softmax / zero temperature yields a one-hot argmax distribution', () => {
-  assertArrayClose(softmax([1, 5, 2], 0), [0, 1, 0], 1e-9)
-  // Ties split the mass evenly.
-  assertArrayClose(softmax([3, 1, 3], 0), [0.5, 0, 0.5], 1e-9)
-})
+Deno.test(
+  'softmax / zero temperature yields a one-hot argmax distribution',
+  () => {
+    assertArrayClose(softmax([1, 5, 2], 0), [0, 1, 0], 1e-9)
+    // Ties split the mass evenly.
+    assertArrayClose(softmax([3, 1, 3], 0), [0.5, 0, 0.5], 1e-9)
+  },
+)
 
 Deno.test('softmax / rejects a negative temperature', () => {
   assertThrows(() => softmax([1, 2, 3], -1), 'non-negative')

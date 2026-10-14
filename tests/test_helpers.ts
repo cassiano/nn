@@ -1,3 +1,7 @@
+///////////////////////
+// AI-generated code //
+///////////////////////
+
 import { Network } from '../network.ts'
 import { Layer, ActivationFunctionType } from '../layer.ts'
 
@@ -196,7 +200,8 @@ export function assertThrows(fn: () => void, match: string | RegExp): void {
     fn()
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    const ok = match instanceof RegExp ? match.test(message) : message.includes(match)
+    const ok =
+      match instanceof RegExp ? match.test(message) : message.includes(match)
     assert(
       ok,
       `Expected thrown error ${JSON.stringify(message)} to match ${String(match)}`,
@@ -222,8 +227,10 @@ function deepEqual(actual: unknown, expected: unknown): boolean {
     return actual.every((value, index) => deepEqual(value, expected[index]))
   }
   if (
-    actual !== null && expected !== null &&
-    typeof actual === 'object' && typeof expected === 'object'
+    actual !== null &&
+    expected !== null &&
+    typeof actual === 'object' &&
+    typeof expected === 'object'
   ) {
     const actualKeys = Object.keys(actual as object)
     const expectedKeys = Object.keys(expected as object)
@@ -232,7 +239,7 @@ function deepEqual(actual: unknown, expected: unknown): boolean {
       deepEqual(
         (actual as Record<string, unknown>)[key],
         (expected as Record<string, unknown>)[key],
-      )
+      ),
     )
   }
   return false

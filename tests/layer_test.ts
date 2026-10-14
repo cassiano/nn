@@ -1,4 +1,13 @@
-import { sigmoid, sigmoidDerivative, reluDerivative, tanhDerivative } from '../activation.ts'
+///////////////////////
+// AI-generated code //
+///////////////////////
+
+import {
+  sigmoid,
+  sigmoidDerivative,
+  reluDerivative,
+  tanhDerivative,
+} from '../activation.ts'
 import { ActivationFunctionType } from '../layer.ts'
 import {
   makeTinyNetwork,
@@ -200,14 +209,17 @@ Deno.test('Layer / nextLayer throws on the output layer', () => {
   )
 })
 
-Deno.test('Layer / isInputLayer and isOutputLayer flag the ends of the stack', () => {
-  const net = makeTinyNetwork()
-  const [input, hidden, output] = net.layers
+Deno.test(
+  'Layer / isInputLayer and isOutputLayer flag the ends of the stack',
+  () => {
+    const net = makeTinyNetwork()
+    const [input, hidden, output] = net.layers
 
-  assert(input.isInputLayer)
-  assert(!input.isOutputLayer)
-  assert(!hidden.isInputLayer)
-  assert(!hidden.isOutputLayer)
-  assert(!output.isInputLayer)
-  assert(output.isOutputLayer)
-})
+    assert(input.isInputLayer)
+    assert(!input.isOutputLayer)
+    assert(!hidden.isInputLayer)
+    assert(!hidden.isOutputLayer)
+    assert(!output.isInputLayer)
+    assert(output.isOutputLayer)
+  },
+)

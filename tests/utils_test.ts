@@ -1,3 +1,7 @@
+///////////////////////
+// AI-generated code //
+///////////////////////
+
 import {
   map,
   timesForEach,
@@ -553,14 +557,8 @@ Deno.test('outerProduct / builds the outer product', () => {
 })
 
 Deno.test('outerProduct / supports vectors of different lengths', () => {
-  assertEquals(outerProduct([1, 2, 3], [10]), [
-    [10],
-    [20],
-    [30],
-  ])
-  assertEquals(outerProduct([5], [1, 2]), [
-    [5, 10],
-  ])
+  assertEquals(outerProduct([1, 2, 3], [10]), [[10], [20], [30]])
+  assertEquals(outerProduct([5], [1, 2]), [[5, 10]])
 })
 
 Deno.test('outerProduct / handles negative values', () => {
@@ -571,9 +569,7 @@ Deno.test('outerProduct / handles negative values', () => {
 })
 
 Deno.test('outerProduct / single entries multiply like scalars', () => {
-  assertEquals(outerProduct([7], [8]), [
-    [56],
-  ])
+  assertEquals(outerProduct([7], [8]), [[56]])
 })
 
 Deno.test('outerProduct / an empty left vector yields an empty matrix', () => {
