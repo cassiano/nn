@@ -384,7 +384,27 @@ export const multiplyMatrices = (
 export const multiplyMatrixByVector = (
   matrix: NumericMatrix,
   vector: NumericVector,
-): NumericVector => matrix.map(row => dotProduct(row, vector))
+): NumericVector => {
+  const rows = matrix.length
+  const result: NumericVector = new Array(rows)
+
+  for (let row = 0; row < rows; row++) {
+    const rowVec = matrix[row]
+
+    if (rowVec.length !== vector.length)
+      throw new Error(
+        `Size of left vector (${rowVec.length}) must match size of right one (${vector.length})`,
+      )
+
+    let sum = 0
+
+    for (let i = 0; i < rowVec.length; i++) sum += rowVec[i] * vector[i]
+
+    result[row] = sum
+  }
+
+  return result
+}
 
 /**
  * Swaps a matrix's rows and columns, reflecting it along its main diagonal.
@@ -473,7 +493,11 @@ export const hadamardProduct = (
       `Size of left vector (${left.length}) must match size of right one (${right.length})`,
     )
 
-  return left.map((leftValue, i) => leftValue * right[i])
+  const result: NumericVector = new Array(left.length)
+
+  for (let i = 0; i < left.length; i++) result[i] = left[i] * right[i]
+
+  return result
 }
 
 /**
@@ -548,7 +572,11 @@ export const addVectors = (
       `Size of left vector (${left.length}) must match size of right one (${right.length})`,
     )
 
-  return left.map((leftValue, i) => leftValue + right[i])
+  const result: NumericVector = new Array(left.length)
+
+  for (let i = 0; i < left.length; i++) result[i] = left[i] + right[i]
+
+  return result
 }
 
 /**
@@ -561,7 +589,13 @@ export const addVectors = (
 export const multiplyVectorByScalar = (
   vector: NumericVector,
   scalar: number,
-): NumericVector => vector.map(value => value * scalar)
+): NumericVector => {
+  const result: NumericVector = new Array(vector.length)
+
+  for (let i = 0; i < vector.length; i++) result[i] = vector[i] * scalar
+
+  return result
+}
 
 /**
  * Divides every entry of a vector by a scalar.
@@ -577,7 +611,12 @@ export const divideVectorByScalar = (
 ): NumericVector => {
   if (scalar === 0) throw new Error('Cannot divide vector by 0')
 
-  return multiplyVectorByScalar(vector, 1 / scalar)
+  const inverse = 1 / scalar
+  const result: NumericVector = new Array(vector.length)
+
+  for (let i = 0; i < vector.length; i++) result[i] = vector[i] * inverse
+
+  return result
 }
 
 /**

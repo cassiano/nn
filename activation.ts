@@ -102,17 +102,34 @@ export function softmax(logits: NumericVector, temperature = 1): NumericVector {
   if (temperature < 0)
     throw new Error('Softmax temperature must be non-negative')
 
-  const max = Math.max(...logits)
-
-  if (temperature === 0) {
-    const winners = logits.filter(v => v === max).length
-    const share = 1 / winners
-
-    return logits.map(v => (v === max ? share : 0))
+  let max = -Infinity
+  for (let i = 0; i < logits.length; i++) {
+    if (logits[i] > max) max = logits[i]
   }
 
-  const exps = logits.map(v => Math.exp((v - max) / temperature))
-  const sum = exps.reduce((a, b) => a + b, 0)
+  if (temperature === 0) {
+    let winners = 0
+    for (let i = 0; i < logits.length; i++) {
+      if (logits[i] === max) winners++
+    }
+    const share = 1 / winners
+    const result: NumericVector = new Array(logits.length)
+    for (let i = 0; i < logits.length; i++) {
+      result[i] = logits[i] === max ? share : 0
+    }
+    return result
+  }
 
-  return exps.map(e => e / sum)
+  const exps: NumericVector = new Array(logits.length)
+  let sum = 0
+  for (let i = 0; i < logits.length; i++) {
+    const e = Math.exp((logits[i] - max) / temperature)
+    exps[i] = e
+    sum += e
+  }
+  const result: NumericVector = new Array(logits.length)
+  for (let i = 0; i < logits.length; i++) {
+    result[i] = exps[i] / sum
+  }
+  return result
 }
