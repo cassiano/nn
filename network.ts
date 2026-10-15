@@ -288,8 +288,10 @@ export class Network {
     timesForEach(this.𝐋, layerIdx => {
       const { w, b, 𝓁 } = firstGradient[layerIdx]
 
-      let summedW = createMatrix(w.length, w[0].length, 0)
-      let summedB = createVector(b.length, 0)
+      // Accumulate in place: a fresh matrix/vector per sample would allocate
+      // hundreds of thousands of cells per batch for the 784-wide first layer.
+      const summedW = createMatrix(w.length, w[0].length, 0)
+      const summedB = createVector(b.length, 0)
 
       for (const gradient of gradients) {
         const layer = gradient[layerIdx]
@@ -297,8 +299,15 @@ export class Network {
         if (layer.𝓁 !== 𝓁)
           throw new Error(`Mixing distinct 𝓁 values (${layer.𝓁} and ${𝓁})`)
 
-        summedW = addMatrices(summedW, layer.w)
-        summedB = addVectors(summedB, layer.b)
+        for (let row = 0; row < summedW.length; row++) {
+          const summedRow = summedW[row]
+          const layerRow = layer.w[row]
+
+          for (let col = 0; col < summedRow.length; col++)
+            summedRow[col] += layerRow[col]
+        }
+
+        for (let i = 0; i < summedB.length; i++) summedB[i] += layer.b[i]
       }
 
       const averageGradientLayer: GradientLayer = {
