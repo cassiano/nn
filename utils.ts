@@ -676,3 +676,26 @@ export const gradientAsVector = (gradient: Gradient): NumericVector => {
 
   return sortedGradient.flatMap(layer => [...layer.w.flat(2), ...layer.b])
 }
+
+/**
+ * Scales every weight and bias of a gradient by `1 / scalar`, turning a summed
+ * batch gradient into its mean. The gradient counterpart of
+ * {@link divideMatrixByScalar}.
+ *
+ * @param gradient The gradient to scale, left unmodified.
+ * @param scalar The divisor applied to every entry.
+ * @returns A new gradient of the same shape, each 𝓁 and layer order preserved.
+ * @throws If `scalar` is 0, rather than filling the gradient with Infinity/NaN.
+ */
+export const divideGradientByScalar = (
+  gradient: Gradient,
+  scalar: number,
+): Gradient => {
+  if (scalar === 0) throw new Error('Cannot divide gradient by 0')
+
+  return gradient.map(layer => ({
+    𝓁: layer.𝓁,
+    w: divideMatrixByScalar(layer.w, scalar),
+    b: divideVectorByScalar(layer.b, scalar),
+  }))
+}

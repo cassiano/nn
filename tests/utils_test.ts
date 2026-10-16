@@ -30,11 +30,13 @@ import {
   random,
   shuffle,
   gradientAsVector,
+  divideGradientByScalar,
   formatPercentageWithDecimalPlaces,
 } from '../utils.ts'
 import { Gradient, NumericMatrix } from '../types.ts'
 import {
   makeTinyNetwork,
+  sampleGradient,
   assert,
   assertEquals,
   assertThrows,
@@ -993,14 +995,14 @@ Deno.test('gradientAsVector / an empty gradient yields an empty vector', () => {
 Deno.test(
   'gradientAsVector / flattens a real gradient in ascending 𝓁 order',
   () => {
-    // The real case the sort was written for: calculateGradient walks the layers
+    // The real case the sort was written for: the gradient walk emits the layers
     // from the output backwards, so its gradient arrives in the opposite order to
     // the vector this function produces.
     const net = makeTinyNetwork()
     net.loadSample([1, 0], 1)
     net.feedForward()
 
-    const gradient = net.calculateGradient()
+    const gradient = sampleGradient(net)
 
     assertEquals(
       gradient.map(layer => layer.𝓁),
@@ -1022,3 +1024,40 @@ Deno.test(
     assertEquals(gradientAsVector(gradient).length, 2 * 2 * 2 + 4)
   },
 )
+
+Deno.test('divideGradientByScalar / divides every weight and bias', () => {
+  const gradient: Gradient = [
+    { 𝓁: 2, w: [[4, 5], [6, 7]], b: [8, 9] },
+    { 𝓁: 1, w: [[2, 3], [4, 5]], b: [6, 7] },
+  ]
+
+  const half = divideGradientByScalar(gradient, 2)
+
+  assertEquals(half.map(layer => layer.𝓁), [2, 1])
+  assertArrayClose(half[0].w.flat(), [2, 2.5, 3, 3.5])
+  assertArrayClose(half[0].b, [4, 4.5])
+  assertArrayClose(half[1].w.flat(), [1, 1.5, 2, 2.5])
+  assertArrayClose(half[1].b, [3, 3.5])
+})
+
+Deno.test('divideGradientByScalar / leaves the gradient untouched', () => {
+  const gradient: Gradient = [{ 𝓁: 1, w: [[2, 4]], b: [8] }]
+
+  divideGradientByScalar(gradient, 2)
+
+  assertEquals(gradient[0].w, [[2, 4]])
+  assertEquals(gradient[0].b, [8])
+})
+
+Deno.test('divideGradientByScalar / throws on a zero divisor', () => {
+  // Same guard as the matrix/vector variants: a silent divide would fill the
+  // gradient with Infinity/NaN and poison the very next weight update.
+  assertThrows(
+    () => divideGradientByScalar([{ 𝓁: 1, w: [[1]], b: [1] }], 0),
+    'Cannot divide gradient by 0',
+  )
+})
+
+Deno.test('divideGradientByScalar / an empty gradient stays empty', () => {
+  assertEquals(divideGradientByScalar([], 2), [])
+})

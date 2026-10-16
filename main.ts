@@ -11,8 +11,8 @@ import {
   timesMap,
   shuffle,
   formatPercentageWithDecimalPlaces,
+  divideGradientByScalar,
 } from './utils.ts'
-import { Gradient } from './types.ts'
 import { timesForEach } from './utils.ts'
 
 // The network and loader are kept at module scope (rather than local to `main`) so
@@ -57,7 +57,10 @@ const main = async () => {
     shuffle(trainingDataIndexes)
 
     timesForEach(totalBatches, batchIdx => {
-      const batchGradients: Gradient[] = []
+      // One zeroed gradient per batch, summed into directly as each sample is
+      // processed — no per-sample gradient matrices and no separate averaging
+      // pass. See Network.accumulateGradient.
+      const summedGradient = network.createEmptyGradient()
 
       timesForEach(BATCH_SIZE, batchImageIdx => {
         const sampleIndex =
@@ -71,10 +74,10 @@ const main = async () => {
         if (predictedDigit === labels[sampleIndex]) hits++
         else misses++
 
-        batchGradients.push(network.calculateGradient())
+        network.accumulateGradient(summedGradient)
       })
 
-      const averageGradient = network.calculateAverageGradient(batchGradients)
+      const averageGradient = divideGradientByScalar(summedGradient, BATCH_SIZE)
 
       network.backPropagate(averageGradient)
 

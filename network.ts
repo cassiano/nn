@@ -7,7 +7,6 @@ import {
   multiplyVectorByScalar,
   createMatrix,
   multiplyMatrixByVector,
-  outerProduct,
 } from './utils.ts'
 import {
   NumericVector,
@@ -16,9 +15,8 @@ import {
   Gradient,
 } from './types.ts'
 import { Layer } from './layer.ts'
-import { hadamardProduct, createVector, divideMatrixByScalar } from './utils.ts'
+import { hadamardProduct, createVector } from './utils.ts'
 import { BATCH_SIZE } from './constants.ts'
-import { divideVectorByScalar, timesForEach } from './utils.ts'
 import {
   MNIST_OUTPUT_SIZE,
   MNIST_IMAGE_COLS,
@@ -32,8 +30,8 @@ import {
  * It holds the state of the sample being processed (its target y and the cost)
  * and drives both passes: forward through the layers, then gradients stepped
  * against the parameters. Since only one sample is loaded at a time, a batch is
- * trained by collecting one gradient per sample, averaging them with
- * {@link Network.calculateAverageGradient} and applying that single step.
+ * trained by accumulating one gradient per sample into a shared buffer with
+ * {@link Network.accumulateGradient} and applying that single step.
  */
 export class Network {
   /** The layers, input first and output last. */
@@ -178,22 +176,56 @@ export class Network {
   }
 
   /**
-   * The gradient of {@link Network.cost} with respect to every trainable
-   * parameter, by the chain rule, from 𝐋 back to 1. Per layer:
+   * A gradient with one zeroed {@link GradientLayer} per trainable layer, in the
+   * order {@link Network.accumulateGradient} fills them: output layer first.
+   *
+   * Reusing one of these across a batch lets {@link Network.accumulateGradient}
+   * add each sample's gradient into it without allocating a fresh matrix per
+   * sample, and without a separate averaging pass.
+   *
+   * @returns A gradient of the right shape, every entry 0.
+   */
+  createEmptyGradient(): Gradient {
+    const gradient: Gradient = []
+
+    for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
+      const layer = this.layers[𝓁]
+
+      const emptyLayer: GradientLayer = {
+        𝓁,
+        w: createMatrix(layer.size, layer.previousLayer.size, 0),
+        b: createVector(layer.size, 0),
+      }
+
+      gradient.push(emptyLayer)
+    }
+
+    return gradient
+  }
+
+  /**
+   * Adds the current sample's gradient on top of `target`, in place. The
+   * gradient of {@link Network.cost} with respect to every trainable parameter,
+   * by the chain rule, from 𝐋 back to 1. Per layer:
    *
    *   δ(𝓁) = ∂C/∂a(𝓁) ☉ σ'(z(𝓁))     ∂C/∂w(𝓁) = δ(𝓁)·a(𝓁-1)ᵀ
    *   ∂C/∂a(𝐋) = 2·(a(𝐋) - y)          ∂C/∂b(𝓁) = δ(𝓁)
    *
    * Inner layers take ∂C/∂a(𝓁) = w(𝓁+1)ᵀ·δ(𝓁+1) from the layer already visited,
-   * which is why the traversal runs backwards. Needs a loaded sample and a
-   * prior {@link Network.feedForward}.
+   * which is why the traversal runs backwards. The per-layer weights are
+   * `+= δ(𝓁)·a(𝓁-1)ᵀ` rather than a fresh outer product, so a whole batch can be
+   * summed into one gradient buffer by calling this once per sample. Needs a
+   * loaded sample and a prior {@link Network.feedForward}.
    *
-   * @returns One {@link GradientLayer} per trainable layer, output layer first.
-   * @throws If a layer is missing its activation function, needed for σ'.
+   * @param target The gradient to add into, as built by
+   * {@link Network.createEmptyGradient} (or a previous accumulation). Its
+   * entries are matched by 𝓁, output layer first, and are updated in place.
+   * @returns Nothing; `target` is updated in place. Each visited layer's δ is
+   * also stored on the layer, for the next (earlier) layer to read.
+   * @throws If an entry's 𝓁 is not a layer of this network, or if a layer is
+   * missing its activation function, needed for σ'.
    */
-  calculateGradient(): Gradient {
-    const gradient: Gradient = []
-
+  accumulateGradient(target: Gradient): void {
     for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
       const layer = this.layers[𝓁]
       const σDerivatives: NumericVector = layer.z.map(layer.σDerivativeFn)
@@ -216,16 +248,25 @@ export class Network {
       // [/doc_img/network.ts/2026-09-26-18-25-14.png]
       layer.δ = hadamardProduct(costByActivationDerivatives, σDerivatives)
 
-      const gradientlayer: GradientLayer = {
-        𝓁,
-        w: outerProduct(layer.δ, layer.previousLayer.a), // [/doc_img/network.ts/2026-09-26-18-21-20.png]
-        b: [...layer.δ], // [/doc_img/network.ts/2026-09-26-18-21-43.png]
+      const targetLayer = target[this.𝐋 - 𝓁]
+
+      if (targetLayer === undefined || targetLayer.𝓁 !== 𝓁)
+        throw new Error(`Layer ${𝓁} not found in target gradient`)
+
+      const previousActivations = layer.previousLayer.a
+
+      // Accumulate ∂C/∂w(𝓁) = δ(𝓁)·a(𝓁-1)ᵀ and ∂C/∂b(𝓁) = δ(𝓁) in place, so no
+      // per-sample matrix is allocated. [/doc_img/network.ts/2026-09-26-18-21-20.png]
+      for (let row = 0; row < layer.δ.length; row++) {
+        const δ = layer.δ[row]
+        const targetRow = targetLayer.w[row]
+
+        for (let col = 0; col < previousActivations.length; col++)
+          targetRow[col] += δ * previousActivations[col]
+
+        targetLayer.b[row] += δ // [/doc_img/network.ts/2026-09-26-18-21-43.png]
       }
-
-      gradient.push(gradientlayer)
     }
-
-    return gradient
   }
 
   /**
@@ -234,15 +275,16 @@ export class Network {
    *   w(𝓁) ← w(𝓁) - η·BATCH_SIZE·∂C/∂w(𝓁)
    *   b(𝓁) ← b(𝓁) - η·BATCH_SIZE·∂C/∂b(𝓁)
    *
-   * BATCH_SIZE cancels the averaging done in
-   * {@link Network.calculateAverageGradient}, so η remains the per-sample rate
-   * and a batch of a different length is not compensated for.
+   * BATCH_SIZE cancels the averaging done before the call (the batch mean is
+   * `divideGradientByScalar(summed, BATCH_SIZE)`), so η remains the per-sample
+   * rate and a batch of a different length is not compensated for.
    *
    * Entries are matched to layers by their own 𝓁, so a per-sample gradient
    * gives an SGD step and a batch mean gives a mini-batch step.
    *
-   * @param gradient The gradients to step against, as returned by
-   * {@link Network.calculateGradient} or its average.
+   * @param gradient The gradients to step against, as built by
+   * {@link Network.createEmptyGradient} and {@link Network.accumulateGradient}
+   * (optionally scaled by `divideGradientByScalar`).
    * @returns Nothing; each layer's parameters are updated in place.
    * @throws If an entry's 𝓁 is not a layer of this network, or if a gradient
    * shape does not line up with the parameters it is applied to.
@@ -263,64 +305,5 @@ export class Network {
         multiplyVectorByScalar(b, -this.η * BATCH_SIZE),
       )
     }
-  }
-
-  /**
-   * Averages a batch of per-sample gradients into one, so a whole batch can be
-   * applied in a single {@link Network.backPropagate} step.
-   *
-   * Layers are paired by array position, and every sample's entry at a position
-   * must carry the same 𝓁 as the first one's, so the batch has to agree on the
-   * order {@link Network.calculateGradient} produced — output layer first, not
-   * ascending.
-   *
-   * @param gradients One {@link Gradient} per sample.
-   * @returns The mean gradient, in the first sample's order.
-   * @throws If `gradients` is empty, or if the samples disagree about the layers.
-   */
-  calculateAverageGradient(gradients: Gradient[]): Gradient {
-    if (gradients.length === 0)
-      throw new Error(`Cannot calculate average gradient (empty collection)`)
-
-    const firstGradient = gradients[0]
-    const averageGradient: Gradient = []
-
-    // Average w and b per layer, pairing entry layerIdx of every sample; the
-    // first sample supplies the 𝓁 labels and the entry order.
-    timesForEach(this.𝐋, layerIdx => {
-      const { w, b, 𝓁 } = firstGradient[layerIdx]
-
-      // Accumulate in place: a fresh matrix/vector per sample would allocate
-      // hundreds of thousands of cells per batch for the 784-wide first layer.
-      const summedW = createMatrix(w.length, w[0].length, 0)
-      const summedB = createVector(b.length, 0)
-
-      for (const gradient of gradients) {
-        const layer = gradient[layerIdx]
-
-        if (layer.𝓁 !== 𝓁)
-          throw new Error(`Mixing distinct 𝓁 values (${layer.𝓁} and ${𝓁})`)
-
-        for (let row = 0; row < summedW.length; row++) {
-          const summedRow = summedW[row]
-          const layerRow = layer.w[row]
-
-          for (let col = 0; col < summedRow.length; col++)
-            summedRow[col] += layerRow[col]
-        }
-
-        for (let i = 0; i < summedB.length; i++) summedB[i] += layer.b[i]
-      }
-
-      const averageGradientLayer: GradientLayer = {
-        𝓁,
-        w: divideMatrixByScalar(summedW, gradients.length),
-        b: divideVectorByScalar(summedB, gradients.length),
-      }
-
-      averageGradient.push(averageGradientLayer)
-    })
-
-    return averageGradient
   }
 }

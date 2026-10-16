@@ -4,6 +4,7 @@
 
 import { Network } from '../network.ts'
 import { Layer, ActivationFunctionType } from '../layer.ts'
+import { Gradient } from '../types.ts'
 
 /**
  * Resets the static `Layer.id` counter, so layer indices (𝓁) are deterministic
@@ -120,6 +121,23 @@ export function makeTinyNetworkWithoutActivation(
   network.layers.push(new Layer(network, 'output', 2, σOutput))
 
   return network
+}
+
+/**
+ * The gradient of `net`'s currently loaded sample, as a fresh buffer: a zeroed
+ * gradient from {@link Network.createEmptyGradient} with
+ * {@link Network.accumulateGradient} run once into it. Needs the sample loaded
+ * and fed forward first.
+ *
+ * @param net The network holding the loaded, forward-propagated sample.
+ * @returns One {@link Gradient} entry per trainable layer, output layer first.
+ */
+export function sampleGradient(net: Network): Gradient {
+  const gradient = net.createEmptyGradient()
+
+  net.accumulateGradient(gradient)
+
+  return gradient
 }
 
 /**

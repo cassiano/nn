@@ -43,7 +43,7 @@ export type GradientLayer = {
 }
 
 /**
- * The gradient of every trainable layer, in the order
- * {@link Network.calculateGradient} produces them: output layer first.
+ * The gradient of every trainable layer, in the order the backward walk emits
+ * them (`Network.accumulateGradient`): output layer first.
  */
 export type Gradient = GradientLayer[]
