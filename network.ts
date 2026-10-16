@@ -251,6 +251,8 @@ export class Network {
     for (const { 𝓁, b, w } of gradient) {
       const layer = this.layers[𝓁]
 
+      if (layer === undefined) throw new Error(`Layer ${𝓁} not found`)
+
       layer.w = addMatrices(
         layer.w,
         multiplyMatrixByScalar(w, -this.η * BATCH_SIZE),

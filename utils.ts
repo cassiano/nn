@@ -611,12 +611,7 @@ export const divideVectorByScalar = (
 ): NumericVector => {
   if (scalar === 0) throw new Error('Cannot divide vector by 0')
 
-  const inverse = 1 / scalar
-  const result: NumericVector = new Array(vector.length)
-
-  for (let i = 0; i < vector.length; i++) result[i] = vector[i] * inverse
-
-  return result
+  return multiplyVectorByScalar(vector, 1 / scalar)
 }
 
 /**

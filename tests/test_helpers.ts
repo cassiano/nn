@@ -17,24 +17,57 @@ export function resetLayerCounter(): void {
 }
 
 /**
+ * A tiny deterministic pseudo-random generator (mulberry32), used to make tests
+ * that depend on random weight initialization reproducible.
+ *
+ * @param seed Any 32-bit integer seed.
+ * @returns A function returning successive values in [0, 1).
+ */
+export function makeSeededRandom(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let t = state
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
  * The standard MNIST-sized network (784 -> 16 -> 16 -> 10), with random weights
  * and tanh-free activations, resetting the layer counter first.
  *
+ * @param seed When given, the weight initialization is made deterministic by
+ * temporarily replacing `Math.random` with {@link makeSeededRandom}; otherwise
+ * the real RNG is used.
  * @returns A freshly constructed {@link Network} with the standard topology.
  * @throws {Error} Propagated from the {@link Network} constructor if the layer
  * sizes fail its validation (not expected for this fixed topology).
  */
-export function makeStandardNetwork(): Network {
+export function makeStandardNetwork(seed?: number): Network {
   resetLayerCounter()
-  return new Network(
-    [
-      { name: 'Input Layer', size: 784 },
-      { name: 'Hidden Layer 1', size: 16, σ: 'sigmoid' },
-      { name: 'Hidden Layer 2', size: 16, σ: 'relu' },
-      { name: 'Output Layer', size: 10, σ: 'softmax' },
-    ],
-    0.01,
-  )
+
+  const build = () =>
+    new Network(
+      [
+        { name: 'Input Layer', size: 784 },
+        { name: 'Hidden Layer 1', size: 16, σ: 'sigmoid' },
+        { name: 'Hidden Layer 2', size: 16, σ: 'relu' },
+        { name: 'Output Layer', size: 10, σ: 'softmax' },
+      ],
+      0.01,
+    )
+
+  if (seed === undefined) return build()
+
+  const originalRandom = Math.random
+  Math.random = makeSeededRandom(seed)
+  try {
+    return build()
+  } finally {
+    Math.random = originalRandom
+  }
 }
 
 /**
