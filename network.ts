@@ -194,6 +194,8 @@ export class Network {
   calculateGradient(): Gradient {
     const gradient: Gradient = []
 
+    // [/doc_img/network.ts/2026-10-19-09-55-27.png]
+    // [/doc_img/network.ts/2026-10-19-09-55-43.png]
     for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
       const layer = this.layers[𝓁]
       const σDerivatives: NumericVector = layer.z.map(layer.σDerivativeFn)
