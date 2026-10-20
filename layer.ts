@@ -71,7 +71,7 @@ export class Layer {
   get parameterCount(): number {
     return this.isInputLayer
       ? 0
-      : this.w.length * this.w[0].length + this.b.length
+      : this.w.length * (this.w[0]?.length ?? 0) + this.b.length
   }
 
   /** The layer feeding into this one. */
