@@ -196,7 +196,7 @@ export class Network {
 
     // [/doc_img/network.ts/2026-10-19-09-55-27.png]
     // [/doc_img/network.ts/2026-10-19-09-55-43.png]
-    // [/doc_img/network.ts/2026-10-21-09-36-34.png]
+    // [/doc_img/network.ts/2026-10-21-09-46-41.png]
     for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
       const layer = this.layers[𝓁]
       const σDerivatives: NumericVector = layer.z.map(layer.σDerivativeFn)
