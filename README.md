@@ -19,57 +19,66 @@ Built with **Deno** + **TypeScript** (fully type-checked, zero runtime deps).
 | Per-layer gradient (chain rule, single sample)   | ✅ Done                                      |
 | Backpropagation (weight/bias update, mini-batch) | ✅ Done (`Network.backPropagate`)            |
 | Batch gradient averaging                         | ✅ Done (`Network.calculateAverageGradient`) |
-| Hyperparameter tuning / accuracy target          | 🔨 Not started                               |
+| Hyperparameter tuning / accuracy target          | 🔨 In progress                              |
 
 The network now trains: each sample's gradient is computed layer-by-layer,
-averaged over a batch of 60 and applied to the weights, for 5 epochs of
-mini-batch gradient descent (see `constants.ts`). Progress and the running
+averaged over a batch of 60 and applied to the weights, for 100 epochs of
+mini-batch gradient descent (see `src/constants.ts`). Progress and the running
 accuracy are printed per batch while training, and the test split is scored
 image by image at the end of the run.
 
 ## How to run
 
 ```sh
-deno check main.ts        # type-check all modules
-deno run --allow-read main.ts   # load the local MNIST files, train for EPOCHS epochs, score the test split
+deno check src/main.ts             # type-check all modules
+deno run --allow-read src/main.ts  # load the local MNIST files, train for EPOCHS epochs, score the test split
 ```
 
 The MNIST files (.zip) are already shipped inside [`data/mnist/`](./data/mnist).
 The loader reads them from disk (no network download) and gunzips them in
-memory; `--allow-read` grants access to the `./data` directory.
+memory; `--allow-read` grants access to the dataset files. Their paths are
+resolved relative to the loader module, so the command above works from any
+working directory.
 
 ### Running the tests
 
 ```sh
-deno test --allow-read   # 184 tests across the whole suite
-deno lint               # type-lint the source and the tests
+deno test --allow-read src/   # 184 tests across the whole suite
+deno lint                     # type-lint the source and the tests
 ```
 
-All tests live in [`tests/`](./tests), one `*_test.ts` file mirroring each
-source module, plus a shared `test_helpers.ts` (assertion utilities and small
-network harnesses).
+All tests live in [`src/tests/`](./src/tests), one `*_test.ts` file mirroring
+each source module, plus a shared `test_helpers.ts` (assertion utilities and
+small network harnesses).
 
 ## Project structure
 
 ```
 .
-├── main.ts           # Entry point: loads data, builds the network, trains, scores the test split
-├── network.ts        # Network class — layers, sample loading, forward pass, cost, gradients, backprop
-├── layer.ts          # Layer class — weights/bias, z/w/a computation, per-layer gradient
-├── activation.ts     # Activation functions + derivatives (sigmoid, relu, tanh, softmax)
-├── mnist_loader.ts   # IDX parsing of the MNIST dataset (+ ASCII image renderer)
-├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, Gradient, …)
-├── utils.ts          # Loop helpers, matrix ops, random, shuffle, assertions
-├── constants.ts      # Hyperparameters and the network topology
-├── tests/            # Automated test suite (184 tests) + shared test helpers
-├── doc_img/          # Screenshots/diagrams referenced from the source comments
-├── tsconfig.json     # TS configuration (bundler-style, strict)
-└── data/mnist/       # The four zipped MNIST data files
+├── src/
+│   ├── main.ts           # Entry point: loads data, builds the network, trains, scores the test split
+│   ├── network.ts        # Network class — layers, sample loading, forward pass, cost, gradients, backprop
+│   ├── layer.ts          # Layer class — weights/bias, z/w/a computation, per-layer gradient
+│   ├── activation.ts     # Activation functions + derivatives (sigmoid, relu, tanh, softmax)
+│   ├── mnist_loader.ts   # IDX parsing of the MNIST dataset (+ ASCII image renderer)
+│   ├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, Gradient, …)
+│   ├── utils.ts          # Loop helpers, matrix ops, random, shuffle, assertions
+│   ├── constants.ts      # Hyperparameters and the network topology
+│   ├── tests/            # Automated test suite (184 tests) + shared test helpers
+│   └── doc_img/          # Screenshots/diagrams referenced from the source comments
+├── data/
+│   ├── mnist/             # The four zipped MNIST data files (the ones the loader reads)
+│   └── mnist-db/          # The same dataset as per-digit PNG files (not read by the loader)
+└── tsconfig.json         # TS configuration (bundler-style, strict)
 ```
+
+All the source lives under `src/`; the module imports are relative (`./types.ts`
+between modules, `../types.ts` from the tests), so the project can be moved or
+renamed without touching a single import path.
 
 ## Network architecture
 
-Defined by `NETWORK_LAYER_CONFIG` in `constants.ts`:
+Defined by `NETWORK_LAYER_CONFIG` in `src/constants.ts`:
 
 | Layer    | Neurons            | Activation |
 | -------- | ------------------ | ---------- |
@@ -83,19 +92,19 @@ weight matrix plus a bias vector, initialized randomly in (-1, 1). Total:
 **12960 weights + 42 biases = 13002 parameters** (see
 `Network.parameterCount`).
 
-Training hyperparameters, all in `constants.ts`:
+Training hyperparameters, all in `src/constants.ts`:
 
 | Constant                    | Value | Meaning                                  |
 | --------------------------- | ----- | ---------------------------------------- |
 | `NETWORK_LEARNING_RATE` (η) | 0.002 | Step size, per sample (see step 6 below) |
 | `BATCH_SIZE`                | 60    | Samples averaged into one weight update  |
-| `EPOCHS`                    | 5     | Passes over the training set             |
+| `EPOCHS`                    | 100   | Passes over the training set             |
 
 ## How a training step flows through
 
-1. **`main`**(`main.ts`) — every epoch reshuffles the sample order and slices it
-   into batches of `BATCH_SIZE` (60). For each sample in a batch the label 0–9
-   is converted to a one-hot vector `y` (`Network.loadSample`), e.g.
+1. **`main`**(`src/main.ts`) — every epoch reshuffles the sample order and
+   slices it into batches of `BATCH_SIZE` (60). For each sample in a batch the
+   label 0–9 is converted to a one-hot vector `y` (`Network.loadSample`), e.g.
    `3 → [0,0,0,1,0,0,0,0,0,0]`.
 2. **Forward pass** (`Network.feedForward` → `Layer.calculatePostActivationValues`):
    each hidden/output layer 𝓁 computes its pre-activation
@@ -134,7 +143,9 @@ equations in code close to their written math form.
 
 ## Files in detail
 
-### `mnist_loader.ts`
+All the paths below are relative to [`src/`](./src).
+
+### `src/mnist_loader.ts`
 
 Parses the zipped **IDX** files into `TrainingData` (`inputs`, `labels`), split
 into `trainingData` (60k images) and `testData` (10k images). Images are
@@ -142,6 +153,10 @@ flattened 28×28 → 784 values, normalized to `[0, 1]` by dividing by 255. Also
 ships `MnistLoader.imageAsText('trainingData' | 'testData', i)` (backed by the
 static `imageToText`), which renders an image as ASCII art
 using the ` ░▒▓▉█` gradient — handy for eyeballing loaded samples.
+
+The four `.zip` files live in [`data/mnist/`](./data/mnist), one level up from
+the module; their paths are resolved from the module's own location, so the
+loader works from any working directory.
 
 #### IDX format (after gunzip)
 
@@ -153,7 +168,7 @@ using the ` ░▒▓▉█` gradient — handy for eyeballing loaded samples.
 | 12–15 | Cols (images)                                     |
 | 16+   | Pixel/label data (one byte per value, big-endian) |
 
-### `utils.ts`
+### `src/utils.ts`
 
 Tiny functional helpers used throughout:
 
@@ -165,10 +180,12 @@ Tiny functional helpers used throughout:
 - `random`, `shuffle` (Fisher–Yates) — randomness utilities
 - `createMatrix` / `createVector` — matrices and vectors filled with a repeated
   value or a per-cell function, e.g. the random weight initialization
-- `toMatrix` / `fromMatrix` — N×1 column-vector conversion
 - `addMatrices` / `addVectors` / `hadamardProduct` — element-wise matrix/vector
   arithmetic (validated against shape mismatches with clear errors)
-- `multiplyMatrices` / `transposeMatrix` — dot-product and transpose
+- `multiplyMatrices` / `multiplyMatrixByVector` / `transposeMatrix` — matrix
+  multiplication, the matrix–vector product `w · a` and the transpose
+- `dotProduct` / `outerProduct` — the scalar `Σ aᵢbᵢ` and the matrix
+  `left[i] · right[j]`, used to build the weight gradient `δ · aᵀ`
 - `multiplyMatrixByScalar` / `multiplyVectorByScalar` and their
   `divide…ByScalar` counterparts — scaling a gradient, by the learning rate or
   by the batch size (the divide variants throw on a 0 divisor)
@@ -182,7 +199,7 @@ Tiny functional helpers used throughout:
 Every helper returns fresh arrays rather than mutating its operands. The one
 exception is `shuffle`, which permutes the array it is given in place.
 
-### `activation.ts`
+### `src/activation.ts`
 
 Pure activation functions and their derivatives (derivatives take the
 pre-activation `z`, as needed for backprop):
@@ -190,7 +207,7 @@ sigmoid, ReLU, tanh and softmax, each numerically stable (sigmoid/softmax
 avoid overflow/underflow on extreme inputs). `softmax` reports a constant
 derivative of 1, so the output layer's δ stays the plain ∂C/∂a.
 
-### `layer.ts`
+### `src/layer.ts`
 
 One layer = one weight matrix `w`, one bias vector `b` and its neuron state
 `z`, `a`, `δ`. The input layer only stores raw inputs and ignores
@@ -198,7 +215,7 @@ One layer = one weight matrix `w`, one bias vector `b` and its neuron state
 for the current sample; the partial derivatives `∂C/∂w`, `∂C/∂b` are built by
 `Network.calculateGradient` and stored on the network, not here.
 
-### `network.ts`
+### `src/network.ts`
 
 Ties layers together; owns the current sample's one-hot target `y`, exposes
 `inputLayer` / `outputLayer`, drives the forward pass, and computes the cost.
@@ -209,6 +226,12 @@ layer. Note that `calculateAverageGradient` pairs a batch up **by entry
 position**, so every sample in a batch must list its layers in the same order —
 a sample that disagrees about a layer's `𝓁` at some position is rejected rather
 than averaged.
+
+### `src/doc_img/`
+
+Diagrams and screenshots referenced from the source comments as
+`[/doc_img/<module>/<timestamp>.png]`. They sit next to the code they
+illustrate, so the paths resolve relative to the source file.
 
 ## License
 

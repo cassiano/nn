@@ -7,7 +7,7 @@ import { map, timesForEachN, assertIsNotNull } from './utils.ts'
 import { NumericMatrix } from './types.ts'
 
 // MNIST dataset: constants describing the format, plus a loader for the
-// gzipped IDX files bundled in ./data/mnist.
+// gzipped IDX files bundled in the project's data/mnist directory.
 
 /** Number of distinct digit classes in the dataset (0-9). */
 export const MNIST_OUTPUT_SIZE = 10
@@ -32,12 +32,18 @@ export const MNIST_PIXEL_MAX = 2 ** 8 - 1 // 255
  */
 const IMAGE_TO_TEXT_MAPPING = ' ░▒▓▉█'
 
+/**
+ * Where the bundled dataset lives, resolved from this module's own location so
+ * the loader finds the files no matter the working directory it runs from.
+ */
+const MNIST_DATA_DIR = `${import.meta.dirname}/../data/mnist`
+
 /** The four dataset files, gzipped and in Big Endian IDX format. */
 const MNIST_PATHS = {
-  trainImages: './data/mnist/train-images-idx3-ubyte.zip',
-  trainLabels: './data/mnist/train-labels-idx1-ubyte.zip',
-  testImages: './data/mnist/t10k-images-idx3-ubyte.zip',
-  testLabels: './data/mnist/t10k-labels-idx1-ubyte.zip',
+  trainImages: `${MNIST_DATA_DIR}/train-images-idx3-ubyte.zip`,
+  trainLabels: `${MNIST_DATA_DIR}/train-labels-idx1-ubyte.zip`,
+  testImages: `${MNIST_DATA_DIR}/t10k-images-idx3-ubyte.zip`,
+  testLabels: `${MNIST_DATA_DIR}/t10k-labels-idx1-ubyte.zip`,
 }
 
 /**

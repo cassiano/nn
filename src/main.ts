@@ -31,7 +31,8 @@ let loader: MnistLoader
  * as they were *before* that step.
  */
 const main = async () => {
-  // Load the MNIST dataset from the zipped IDX files in ./data/mnist.
+  // Load the MNIST dataset from the zipped IDX files in the project's
+  // data/mnist directory.
   loader = new MnistLoader()
   await loader.load(console.log)
   assertIsNotNull(loader.trainingData)
