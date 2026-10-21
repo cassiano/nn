@@ -201,23 +201,26 @@ export class Network {
       const layer = this.layers[𝓁]
       const σDerivatives: NumericVector = layer.z.map(layer.σDerivativeFn)
 
-      let costByActivationDerivatives: NumericVector // ∂C/∂a
+      let costByActivationPartialDerivatives: NumericVector // ∂C/∂a
 
       if (layer.isOutputLayer) {
-        costByActivationDerivatives = layer.a.map(
+        costByActivationPartialDerivatives = layer.a.map(
           (activationValue, i) => 2 * (activationValue - this.y[i]),
         )
       } else {
         const nextLayer = layer.nextLayer
 
-        costByActivationDerivatives = multiplyMatrixByVector(
+        costByActivationPartialDerivatives = multiplyMatrixByVector(
           transposeMatrix(nextLayer.w),
           nextLayer.δ,
         )
       }
 
       // [/doc_img/network.ts/2026-09-26-18-25-14.png]
-      layer.δ = hadamardProduct(costByActivationDerivatives, σDerivatives)
+      layer.δ = hadamardProduct(
+        costByActivationPartialDerivatives,
+        σDerivatives,
+      )
 
       const gradientlayer: GradientLayer = {
         𝓁,
