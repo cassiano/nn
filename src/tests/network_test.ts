@@ -19,7 +19,7 @@ import {
 import { Network } from '../network.ts'
 import { Layer } from '../layer.ts'
 import { Gradient } from '../types.ts'
-import { BATCH_SIZE } from '../constants.ts'
+import { NMIST_BATCH_SIZE } from '../constants.ts'
 import {
   MNIST_IMAGE_COLS,
   MNIST_IMAGE_ROWS,
@@ -578,8 +578,8 @@ Deno.test(
 Deno.test(
   'Network / backPropagate steps the weights against the gradient',
   () => {
-    // Exact arithmetic: the update is w -= η·BATCH_SIZE·∂C/∂w, with the BATCH_SIZE
-    // factor cancelling the 1/BATCH_SIZE that calculateAverageGradient divides by.
+    // Exact arithmetic: the update is w -= η·NMIST_BATCH_SIZE·∂C/∂w, with the NMIST_BATCH_SIZE
+    // factor cancelling the 1/NMIST_BATCH_SIZE that calculateAverageGradient divides by.
     const net = makeTinyNetwork()
     const [input, hidden, output] = net.layers
     input.a = [0.5, 0.9]
@@ -615,7 +615,7 @@ Deno.test(
 
     net.backPropagate(gradient)
 
-    const rate = net.η * BATCH_SIZE
+    const rate = net.η * NMIST_BATCH_SIZE
     for (let r = 0; r < 2; r++) {
       for (let c = 0; c < 2; c++) {
         assertClose(
@@ -687,9 +687,9 @@ Deno.test(
 
     // Only (0,0) of the output layer and (1,1) of the hidden layer move; the
     // entry emitted second in the reversed list must not touch the output layer.
-    assertClose(output.w[0][0], -net.η * BATCH_SIZE, 1e-12)
+    assertClose(output.w[0][0], -net.η * NMIST_BATCH_SIZE, 1e-12)
     assertClose(output.w[1][0], 0, 1e-12)
-    assertClose(hidden.w[1][1], -net.η * BATCH_SIZE, 1e-12)
+    assertClose(hidden.w[1][1], -net.η * NMIST_BATCH_SIZE, 1e-12)
     assertClose(hidden.w[0][0], 0, 1e-12)
   },
 )
@@ -736,10 +736,10 @@ Deno.test(
   'Network / backPropagate reduces the cost of the current sample',
   () => {
     // One real gradient step on a fixed, hand-computable network. η is scaled by
-    // 1/BATCH_SIZE so the effective step stays small, since a step of η·BATCH_SIZE
+    // 1/NMIST_BATCH_SIZE so the effective step stays small, since a step of η·NMIST_BATCH_SIZE
     // would overshoot this toy network.
     const net = makeSeededTinyNetwork()
-    net.η = 0.01 / BATCH_SIZE
+    net.η = 0.01 / NMIST_BATCH_SIZE
 
     const costBefore = net.cost
     net.backPropagate(net.calculateGradient())
@@ -759,7 +759,7 @@ Deno.test('Network / a mini-batch step lowers the batch total cost', () => {
   // network overshoots (the batch cost rises) for a small fraction of initial
   // weights, which made this test flaky.
   const net = makeStandardNetwork(622)
-  net.η = 0.01 / BATCH_SIZE
+  net.η = 0.01 / NMIST_BATCH_SIZE
 
   const samples = [0, 1, 2, 3].map(i => ({
     inputs: new Array(784).fill(i / 3),
@@ -798,7 +798,7 @@ Deno.test(
     const net = makeStandardNetwork()
     net.outputLayer.a = [0, 0, 0, 0.9, 0, 0, 0.1, 0, 0, 0]
 
-    assertEquals(net.predictedDigit(), 3)
+    assertEquals(net.predictedClass(), 3)
   },
 )
 
@@ -810,7 +810,7 @@ Deno.test(
     const net = makeStandardNetwork()
     net.outputLayer.a = new Array(MNIST_OUTPUT_SIZE).fill(0.1)
 
-    assertEquals(net.predictedDigit(), 0)
+    assertEquals(net.predictedClass(), 0)
   },
 )
 
