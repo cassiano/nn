@@ -72,7 +72,9 @@ export class Network {
     this.batchSize = options.batchSize ?? 1
 
     if (this.batchSize < 1)
-      throw new Error(`Expected batch size of at least 1 but got ${this.batchSize}`)
+      throw new Error(
+        `Expected batch size of at least 1 but got ${this.batchSize}`,
+      )
 
     const { inputSize, outputSize } = options
 
@@ -350,5 +352,19 @@ export class Network {
     })
 
     return averageGradient
+  }
+
+  async saveToDisk(path: string) {
+    // Save network weights to disk for later inspection or reuse.
+    await Deno.writeTextFile(
+      path,
+      JSON.stringify(
+        this.layers
+          .slice(1)
+          .map(layer => ({ 𝓁: layer.𝓁, w: layer.w, b: layer.b })),
+        null,
+        2,
+      ),
+    )
   }
 }
