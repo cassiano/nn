@@ -41,9 +41,6 @@ export class Layer {
   /** Error signal δ(𝓁) = ∂C/∂a(𝓁); empty until backpropagation runs. */
   δ: NumericVector = [] // [/doc_img/layer.ts/2026-09-26-14-25-34.png]
 
-  /** Counts layers as they are constructed, and backs {@link Layer.𝓁}. */
-  static id = 0
-
   /**
    * Builds a layer, randomly initializing its parameters unless it is the input
    * layer. Layers are expected to be constructed in feedforward order, since
@@ -62,7 +59,9 @@ export class Layer {
     public size: number,
     public σ?: ActivationFunctionType,
   ) {
-    this.𝓁 = Layer.id++
+    // The index is the layer's position within its own network, so several
+    // networks can live in the same process without their indices drifting.
+    this.𝓁 = network.layers.length
 
     if (!this.isInputLayer) this.initializeNetworkParameters()
   }

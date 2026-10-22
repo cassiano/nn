@@ -14,16 +14,11 @@ import {
   InitialLayerData,
   GradientLayer,
   Gradient,
+  NetworkOptions,
 } from './types.ts'
 import { Layer } from './layer.ts'
 import { hadamardProduct, createVector, divideMatrixByScalar } from './utils.ts'
-import { BATCH_SIZE } from './constants.ts'
 import { divideVectorByScalar, timesForEach } from './utils.ts'
-import {
-  MNIST_OUTPUT_SIZE,
-  MNIST_IMAGE_COLS,
-  MNIST_IMAGE_ROWS,
-} from './mnist_loader.ts'
 
 /**
  * A feedforward network made of an ordered list of {@link Layer}s, indexed by
@@ -43,17 +38,30 @@ export class Network {
   y: NumericVector = []
 
   /**
+   * How many samples each weight update averages over. The gradient of a
+   * batch is a mean, so the update scales by this to keep η a per-sample rate.
+   */
+  batchSize: number
+
+  /**
    * Builds a network from a high-level description of each layer.
+   *
+   * The network knows nothing about any particular dataset: the expected input
+   * and output sizes are optional checks, so the same class serves MNIST
+   * (784 in, 10 out) and XOR (2 in, 2 out).
    *
    * @param layersData One entry per layer, in feedforward order.
    * @param η Learning rate, used by {@link Network.backPropagate} to scale each
    * update.
+   * @param options Optional expectations about the data and the batch size.
    * @returns Nothing; the layers are stored on the network.
-   * @throws If the architecture does not match the dataset (784 in, 10 out).
+   * @throws If the architecture does not match the expected input/output sizes,
+   * or if the batch size is not positive.
    */
   constructor(
     layersData: InitialLayerData[],
     public η: number, // Learning rate (greek letter eta)
+    options: NetworkOptions = {},
   ) {
     for (const data of layersData) {
       const layer = new Layer(this, data.name, data.size, data.σ)
@@ -61,15 +69,21 @@ export class Network {
       this.layers.push(layer)
     }
 
-    // The architecture must match the dataset: 28x28 pixels in, 10 digits out.
-    if (this.inputLayer.size !== MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS)
+    this.batchSize = options.batchSize ?? 1
+
+    if (this.batchSize < 1)
+      throw new Error(`Expected batch size of at least 1 but got ${this.batchSize}`)
+
+    const { inputSize, outputSize } = options
+
+    if (inputSize !== undefined && this.inputLayer.size !== inputSize)
       throw new Error(
-        `Expected input layer size of ${MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS} but got ${this.inputLayer.size}`,
+        `Expected input layer size of ${inputSize} but got ${this.inputLayer.size}`,
       )
 
-    if (this.outputLayer.size !== MNIST_OUTPUT_SIZE)
+    if (outputSize !== undefined && this.outputLayer.size !== outputSize)
       throw new Error(
-        `Expected output layer size of ${MNIST_OUTPUT_SIZE} but got ${this.outputLayer.size}`,
+        `Expected output layer size of ${outputSize} but got ${this.outputLayer.size}`,
       )
   }
 
@@ -116,12 +130,16 @@ export class Network {
 
   /**
    * Registers a training sample: the raw inputs on the input layer, and the
-   * digit as a one-hot target in {@link Network.y}. Does not run a forward pass.
+   * label as a one-hot target in {@link Network.y}. Does not run a forward pass.
    *
-   * @param inputs One value per input neuron, expected normalized to [0, 1].
-   * @param label The digit the image depicts, 0-9.
+   * The target has one entry per output neuron, so a 10-class network encodes
+   * `3` as [0,0,0,1,0,0,0,0,0,0] and a 2-class one encodes `1` as [0,1].
+   *
+   * @param inputs One value per input neuron.
+   * @param label The class the sample belongs to, 0-based.
    * @returns Nothing; the sample is stored on the network.
-   * @throws If `inputs` is not the input layer's size.
+   * @throws If `inputs` is not the input layer's size, or if `label` is not a
+   * class the output layer can hold.
    */
   loadSample(inputs: NumericVector, label: number): void {
     if (inputs.length !== this.inputLayer.size)
@@ -129,9 +147,14 @@ export class Network {
         `Expected input size of ${this.inputLayer.size} but got ${inputs.length}`,
       )
 
+    if (!Number.isInteger(label) || label < 0 || label >= this.outputLayer.size)
+      throw new Error(
+        `Expected label between 0 and ${this.outputLayer.size - 1} but got ${label}`,
+      )
+
     this.inputLayer.a = inputs
 
-    this.y = timesMap(MNIST_OUTPUT_SIZE, i => (i === label ? 1 : 0))
+    this.y = timesMap(this.outputLayer.size, i => (i === label ? 1 : 0))
   }
 
   /**
@@ -165,16 +188,15 @@ export class Network {
   }
 
   /**
-   * The digit the network currently predicts, given a prior forward pass.
+   * The class the network currently predicts, given a prior forward pass: the
+   * output neuron with the highest activation.
    *
-   * @returns The index of the highest activation, 0-9.
+   * @returns The index of the highest activation, 0-based.
    */
-  predictedDigit(): number {
-    const predictedDigitProbability = Math.max(...this.outputLayer.a)
+  predictedClass(): number {
+    const highestActivation = Math.max(...this.outputLayer.a)
 
-    return this.outputLayer.a.findIndex(
-      value => value === predictedDigitProbability,
-    )
+    return this.outputLayer.a.findIndex(value => value === highestActivation)
   }
 
   /**
@@ -237,10 +259,10 @@ export class Network {
   /**
    * One gradient-descent step over every trainable parameter:
    *
-   *   w(𝓁) ← w(𝓁) - η·BATCH_SIZE·∂C/∂w(𝓁)
-   *   b(𝓁) ← b(𝓁) - η·BATCH_SIZE·∂C/∂b(𝓁)
+   *   w(𝓁) ← w(𝓁) - η·batchSize·∂C/∂w(𝓁)
+   *   b(𝓁) ← b(𝓁) - η·batchSize·∂C/∂b(𝓁)
    *
-   * BATCH_SIZE cancels the averaging done in
+   * batchSize cancels the averaging done in
    * {@link Network.calculateAverageGradient}, so η remains the per-sample rate
    * and a batch of a different length is not compensated for.
    *
@@ -261,12 +283,12 @@ export class Network {
 
       layer.w = addMatrices(
         layer.w,
-        multiplyMatrixByScalar(w, -this.η * BATCH_SIZE),
+        multiplyMatrixByScalar(w, -this.η * this.batchSize),
       )
 
       layer.b = addVectors(
         layer.b,
-        multiplyVectorByScalar(b, -this.η * BATCH_SIZE),
+        multiplyVectorByScalar(b, -this.η * this.batchSize),
       )
     }
   }

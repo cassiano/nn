@@ -30,6 +30,21 @@ export type InitialLayerData = {
 }
 
 /**
+ * Optional settings for a {@link Network}: what shape of data it will see, and
+ * how many samples each weight update averages over. Everything is optional, so
+ * a network can be built for any dataset (MNIST, XOR, …) without changing the
+ * class itself.
+ * @property inputSize - expected number of inputs, checked against the input layer
+ * @property outputSize - expected number of outputs (classes), checked against the output layer
+ * @property batchSize - number of samples whose gradients are averaged into one update
+ */
+export type NetworkOptions = {
+  inputSize?: number
+  outputSize?: number
+  batchSize?: number
+}
+
+/**
  * How the cost changes with one layer's parameters, shaped like the parameters
  * themselves so it can be applied to them directly.
  * @property 𝓁 - the layer's index (1-based; the input layer has no parameters)

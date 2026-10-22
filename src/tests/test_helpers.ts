@@ -4,17 +4,7 @@
 
 import { Network } from '../network.ts'
 import { Layer, ActivationFunctionType } from '../layer.ts'
-
-/**
- * Resets the static `Layer.id` counter, so layer indices (𝓁) are deterministic
- * from one test to the next. Mutates shared state and must be called before
- * building a network whose indices a test depends on.
- *
- * @returns Nothing.
- */
-export function resetLayerCounter(): void {
-  Layer.id = 0
-}
+import { BATCH_SIZE } from '../constants.ts'
 
 /**
  * A tiny deterministic pseudo-random generator (mulberry32), used to make tests
@@ -36,7 +26,7 @@ export function makeSeededRandom(seed: number): () => number {
 
 /**
  * The standard MNIST-sized network (784 -> 16 -> 16 -> 10), with random weights
- * and tanh-free activations, resetting the layer counter first.
+ * and tanh-free activations.
  *
  * @param seed When given, the weight initialization is made deterministic by
  * temporarily replacing `Math.random` with {@link makeSeededRandom}; otherwise
@@ -46,8 +36,6 @@ export function makeSeededRandom(seed: number): () => number {
  * sizes fail its validation (not expected for this fixed topology).
  */
 export function makeStandardNetwork(seed?: number): Network {
-  resetLayerCounter()
-
   const build = () =>
     new Network(
       [
@@ -57,6 +45,7 @@ export function makeStandardNetwork(seed?: number): Network {
         { name: 'Output Layer', size: 10, σ: 'softmax' },
       ],
       0.01,
+      { inputSize: 784, outputSize: 10, batchSize: BATCH_SIZE },
     )
 
   if (seed === undefined) return build()
@@ -71,36 +60,33 @@ export function makeStandardNetwork(seed?: number): Network {
 }
 
 /**
- * A small 2 -> 2 -> 2 network, built without the constructor's MNIST size
- * validation so tests can hand-verify the math on concrete numbers. The layer
- * counter is reset first.
+ * A small 2 -> 2 -> 2 network, so tests can hand-verify the math on concrete
+ * numbers.
  *
  * @param σHidden Activation for the hidden layer, or `undefined` for none.
  * Defaults to `'sigmoid'`.
  * @param σOutput Activation for the output layer, or `undefined` for none.
  * Defaults to `'sigmoid'`.
- * @returns A freshly constructed 2 -> 2 -> 2 {@link Network} bypassing size checks.
+ * @returns A freshly constructed 2 -> 2 -> 2 {@link Network}.
  */
 export function makeTinyNetwork(
   σHidden: ActivationFunctionType = 'sigmoid',
   σOutput: ActivationFunctionType = 'sigmoid',
 ): Network {
-  resetLayerCounter()
-  const network = Object.create(Network.prototype) as Network
-  network.layers = []
-  network.y = []
-  network.η = 0.01
-
-  network.layers.push(new Layer(network, 'input', 2))
-  network.layers.push(new Layer(network, 'hidden', 2, σHidden))
-  network.layers.push(new Layer(network, 'output', 2, σOutput))
-
-  return network
+  return new Network(
+    [
+      { name: 'input', size: 2 },
+      { name: 'hidden', size: 2, σ: σHidden },
+      { name: 'output', size: 2, σ: σOutput },
+    ],
+    0.01,
+    { batchSize: BATCH_SIZE },
+  )
 }
 
 /**
  * A 2 -> 2 -> 2 network whose hidden layer has no σ, for exercising the
- * "activation function required" error paths. The layer counter is reset first.
+ * "activation function required" error paths.
  *
  * @param σOutput Activation for the output layer, or `undefined` for none.
  * Defaults to `'sigmoid'`.
@@ -109,17 +95,15 @@ export function makeTinyNetwork(
 export function makeTinyNetworkWithoutActivation(
   σOutput: ActivationFunctionType | undefined = 'sigmoid',
 ): Network {
-  resetLayerCounter()
-  const network = Object.create(Network.prototype) as Network
-  network.layers = []
-  network.y = []
-  network.η = 0.01
-
-  network.layers.push(new Layer(network, 'input', 2))
-  network.layers.push(new Layer(network, 'hidden', 2))
-  network.layers.push(new Layer(network, 'output', 2, σOutput))
-
-  return network
+  return new Network(
+    [
+      { name: 'input', size: 2 },
+      { name: 'hidden', size: 2 },
+      { name: 'output', size: 2, σ: σOutput },
+    ],
+    0.01,
+    { batchSize: BATCH_SIZE },
+  )
 }
 
 /**

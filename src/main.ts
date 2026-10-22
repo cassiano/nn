@@ -5,6 +5,11 @@ import {
   EPOCHS,
 } from './constants.ts'
 import { MnistLoader } from './mnist_loader.ts'
+import {
+  MNIST_IMAGE_COLS,
+  MNIST_IMAGE_ROWS,
+  MNIST_OUTPUT_SIZE,
+} from './mnist_loader.ts'
 import { Network } from './network.ts'
 import {
   assertIsNotNull,
@@ -39,7 +44,11 @@ const main = async () => {
   assertIsNotNull(loader.testData)
 
   // Build the network topology and learning rate (η).
-  network = new Network(NETWORK_LAYER_CONFIG, NETWORK_LEARNING_RATE)
+  network = new Network(NETWORK_LAYER_CONFIG, NETWORK_LEARNING_RATE, {
+    inputSize: MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS,
+    outputSize: MNIST_OUTPUT_SIZE,
+    batchSize: BATCH_SIZE,
+  })
 
   console.log({ parameterCount: network.parameterCount })
 
@@ -67,9 +76,9 @@ const main = async () => {
         network.loadSample(inputs[sampleIndex], labels[sampleIndex])
         network.feedForward()
 
-        const predictedDigit = network.predictedDigit()
+        const predicted = network.predictedClass()
 
-        if (predictedDigit === labels[sampleIndex]) hits++
+        if (predicted === labels[sampleIndex]) hits++
         else misses++
 
         batchGradients.push(network.calculateGradient())
@@ -108,7 +117,7 @@ const main = async () => {
     network.loadSample(testInputs[testImageIdx], testLabels[testImageIdx])
     network.feedForward()
 
-    const predictedDigit = network.predictedDigit()
+    const predictedDigit = network.predictedClass()
 
     if (predictedDigit === testLabels[testImageIdx]) hits++
     else misses++
@@ -139,4 +148,4 @@ const main = async () => {
   })
 }
 
-await main()
+if (import.meta.main) await main()
