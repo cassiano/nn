@@ -95,17 +95,19 @@ export function evaluateXor(
   let misses = 0
 
   const rows: XorRow[] = data.inputs.map((inputs, i) => {
-    network.loadSample(inputs, data.labels[i])
+    const expected = data.labels[i]
+
+    network.loadSample(inputs, expected)
     network.feedForward()
 
     const predicted = network.predictedClass()
 
-    if (predicted === data.labels[i]) hits++
+    if (predicted === expected) hits++
     else misses++
 
     return {
       inputs: [...inputs],
-      expected: data.labels[i],
+      expected,
       predicted,
       outputs: [...network.outputLayer.a],
     }

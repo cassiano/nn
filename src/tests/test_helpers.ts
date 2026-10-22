@@ -3,8 +3,8 @@
 ///////////////////////
 
 import { Network } from '../network.ts'
-import { Layer, ActivationFunctionType } from '../layer.ts'
-import { BATCH_SIZE } from '../constants.ts'
+import { ActivationFunctionType } from '../layer.ts'
+import { NMIST_BATCH_SIZE } from '../constants.ts'
 
 /**
  * A tiny deterministic pseudo-random generator (mulberry32), used to make tests
@@ -45,7 +45,7 @@ export function makeStandardNetwork(seed?: number): Network {
         { name: 'Output Layer', size: 10, σ: 'softmax' },
       ],
       0.01,
-      { inputSize: 784, outputSize: 10, batchSize: BATCH_SIZE },
+      { inputSize: 784, outputSize: 10, batchSize: NMIST_BATCH_SIZE },
     )
 
   if (seed === undefined) return build()
@@ -80,7 +80,7 @@ export function makeTinyNetwork(
       { name: 'output', size: 2, σ: σOutput },
     ],
     0.01,
-    { batchSize: BATCH_SIZE },
+    { batchSize: NMIST_BATCH_SIZE },
   )
 }
 
@@ -102,7 +102,7 @@ export function makeTinyNetworkWithoutActivation(
       { name: 'output', size: 2, σ: σOutput },
     ],
     0.01,
-    { batchSize: BATCH_SIZE },
+    { batchSize: NMIST_BATCH_SIZE },
   )
 }
 

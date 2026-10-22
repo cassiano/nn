@@ -1,8 +1,8 @@
 import {
-  BATCH_SIZE,
-  NETWORK_LAYER_CONFIG,
-  NETWORK_LEARNING_RATE,
-  EPOCHS,
+  NMIST_BATCH_SIZE,
+  NMIST_LAYER_CONFIG,
+  NMIST_LEARNING_RATE,
+  NMIST_EPOCHS,
 } from './constants.ts'
 import { MnistLoader } from './mnist_loader.ts'
 import {
@@ -17,7 +17,6 @@ import {
   shuffle,
   formatPercentageWithDecimalPlaces,
 } from './utils.ts'
-import { Gradient } from './types.ts'
 import { timesForEach } from './utils.ts'
 
 // The network and loader are kept at module scope (rather than local to `main`) so
@@ -27,11 +26,11 @@ let loader: MnistLoader
 
 /**
  * Entry point: loads MNIST, builds the network from
- * {@link NETWORK_LAYER_CONFIG}, trains it with mini-batch gradient descent for
- * {@link EPOCHS} epochs, then scores it on the test split.
+ * {@link NMIST_LAYER_CONFIG}, trains it with mini-batch gradient descent for
+ * {@link NMIST_EPOCHS} epochs, then scores it on the test split.
  *
  * Each epoch reshuffles the samples and walks whole batches of
- * {@link BATCH_SIZE}: the gradients of the batch are collected, averaged and
+ * {@link NMIST_BATCH_SIZE}: the gradients of the batch are collected, averaged and
  * applied in one step, so the numbers logged for a batch describe the weights
  * as they were *before* that step.
  */
@@ -44,34 +43,32 @@ const main = async () => {
   assertIsNotNull(loader.testData)
 
   // Build the network topology and learning rate (η).
-  network = new Network(NETWORK_LAYER_CONFIG, NETWORK_LEARNING_RATE, {
+  network = new Network(NMIST_LAYER_CONFIG, NMIST_LEARNING_RATE, {
     inputSize: MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS,
     outputSize: MNIST_OUTPUT_SIZE,
-    batchSize: BATCH_SIZE,
+    batchSize: NMIST_BATCH_SIZE,
   })
 
   console.log({ parameterCount: network.parameterCount })
 
   const { inputs, labels } = loader.trainingData
-  const totalBatches = Math.trunc(inputs.length / BATCH_SIZE)
+  const totalBatches = Math.trunc(inputs.length / NMIST_BATCH_SIZE)
   const trainingDataIndexes = timesMap(inputs.length, i => i)
 
   let avgCost = 0
   let hits: number
   let misses: number
 
-  timesForEach(EPOCHS, epochIdx => {
+  timesForEach(NMIST_EPOCHS, epochIdx => {
     hits = 0
     misses = 0
 
     shuffle(trainingDataIndexes)
 
     timesForEach(totalBatches, batchIdx => {
-      const batchGradients: Gradient[] = []
-
-      timesForEach(BATCH_SIZE, batchImageIdx => {
+      const batchGradients = timesMap(NMIST_BATCH_SIZE, batchImageIdx => {
         const sampleIndex =
-          trainingDataIndexes[batchIdx * BATCH_SIZE + batchImageIdx]
+          trainingDataIndexes[batchIdx * NMIST_BATCH_SIZE + batchImageIdx]
 
         network.loadSample(inputs[sampleIndex], labels[sampleIndex])
         network.feedForward()
@@ -81,25 +78,23 @@ const main = async () => {
         if (predicted === labels[sampleIndex]) hits++
         else misses++
 
-        batchGradients.push(network.calculateGradient())
+        return network.calculateGradient()
       })
 
-      const averageGradient = network.calculateAverageGradient(batchGradients)
-
-      network.backPropagate(averageGradient)
+      network.backPropagate(network.calculateAverageGradient(batchGradients))
 
       avgCost =
         ((epochIdx * totalBatches + batchIdx) * avgCost + network.cost) /
         (epochIdx * totalBatches + (batchIdx + 1))
 
       console.log({
-        epoch: `${epochIdx + 1}/${EPOCHS}`,
+        epoch: `${epochIdx + 1}/${NMIST_EPOCHS}`,
         batch: `${batchIdx + 1}/${totalBatches}`,
         cost: network.cost,
         hits,
         misses,
         avgCost,
-        epochAccuracy: `${formatPercentageWithDecimalPlaces(hits / ((batchIdx + 1) * BATCH_SIZE), 2)}%`,
+        epochAccuracy: `${formatPercentageWithDecimalPlaces(hits / ((batchIdx + 1) * NMIST_BATCH_SIZE), 2)}%`,
       })
     })
   })
@@ -139,7 +134,7 @@ const main = async () => {
   console.log('--------------')
 
   console.log({
-    epochs: EPOCHS,
+    epochs: NMIST_EPOCHS,
     η: network.η,
     cost: network.cost,
     hits,
