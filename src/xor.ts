@@ -245,7 +245,7 @@ export function printTruthTable(evaluation: XorEvaluation): void {
  *
  * @returns Nothing; the training and the results are logged.
  */
-const main = async () => {
+const main = () => {
   const result = trainXorNetwork()
 
   console.log({
@@ -259,4 +259,4 @@ const main = async () => {
   printTruthTable(result.evaluation)
 }
 
-if (import.meta.main) await main()
+if (import.meta.main) main()
