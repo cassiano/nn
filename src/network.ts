@@ -354,6 +354,12 @@ export class Network {
     return averageGradient
   }
 
+  /**
+   * Saves the network's weights and biases to disk, in a JSON file with one
+   * layer per line.
+   *
+   * @param path The file path to save the network to.
+   */
   async saveToDisk(path: string) {
     // Save network weights to disk for later inspection or reuse.
     await Deno.writeTextFile(
