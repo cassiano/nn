@@ -250,9 +250,7 @@ export function printTruthTable(evaluation: XorEvaluation): void {
 const main = async () => {
   const result = trainXorNetwork()
 
-  await result.network.saveToDisk(
-    `${import.meta.dirname}/../data/xor_network.json`,
-  )
+  await result.network.saveToDisk('xor_network.json')
 
   console.log({
     parameters: result.network.parameterCount,

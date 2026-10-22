@@ -363,7 +363,7 @@ export class Network {
   async saveToDisk(path: string) {
     // Save network weights to disk for later inspection or reuse.
     await Deno.writeTextFile(
-      path,
+      `${import.meta.dirname}/../data/${path}`,
       JSON.stringify(
         this.layers
           .slice(1)

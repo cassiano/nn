@@ -99,7 +99,7 @@ const main = async () => {
     })
   })
 
-  network.saveToDisk(`${import.meta.dirname}/../data/mnist_network.json`)
+  network.saveToDisk('mnist_network.json')
 
   console.log('-----------------------------------------')
   console.log('Checking network accuracy with test data:')
