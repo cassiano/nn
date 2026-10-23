@@ -355,15 +355,14 @@ export class Network {
   }
 
   /**
-   * Saves the network's weights and biases to disk, in a JSON file with one
-   * layer per line.
+   * Saves the network's weights and biases to disk, ordered by layer, for later
+   * inspection or reuse. The input layer has no parameters and is omitted.
    *
-   * @param path The file path to save the network to.
+   * @param filename The filename to save the network to.
    */
-  async saveToDisk(path: string) {
-    // Save network weights to disk for later inspection or reuse.
+  async saveToDisk(filename: string) {
     await Deno.writeTextFile(
-      `${import.meta.dirname}/../data/${path}`,
+      `${import.meta.dirname}/../data/${filename}`,
       JSON.stringify(
         this.layers
           .slice(1)
