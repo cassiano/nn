@@ -1,3 +1,7 @@
+///////////////////////
+// AI-generated code //
+///////////////////////
+
 import {
   XOR_BATCH_SIZE,
   XOR_EPOCHS,
