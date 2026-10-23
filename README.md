@@ -1,10 +1,10 @@
 # Neural Network from Scratch (TypeScript / Deno)
 
-A hand-written feedforward neural network for classifying handwritten digits
-from the [MNIST dataset](http://yann.lecun.com/exdb/mnist/). No machine
-learning libraries — the network, activation functions, matrix math and data
-loading are all implemented directly, so you can follow the math behind every
-equation.
+A hand-written feedforward neural network with two runnable demos: classifying
+handwritten digits from the [MNIST dataset](http://yann.lecun.com/exdb/mnist/)
+and learning the XOR gate. No machine learning libraries — the network,
+activation functions, matrix math and data loading are all implemented
+directly, so you can follow the math behind every equation.
 
 Built with **Deno** + **TypeScript** (fully type-checked, zero runtime deps).
 
@@ -19,26 +19,42 @@ Built with **Deno** + **TypeScript** (fully type-checked, zero runtime deps).
 | Per-layer gradient (chain rule, single sample)   | ✅ Done                                      |
 | Backpropagation (weight/bias update, mini-batch) | ✅ Done (`Network.backPropagate`)            |
 | Batch gradient averaging                         | ✅ Done (`Network.calculateAverageGradient`) |
+| XOR training + evaluation                        | ✅ Done (`src/xor.ts`)                       |
+| Weight/bias persistence (`Network.saveToDisk`)   | ✅ Done                                      |
 | Hyperparameter tuning / accuracy target          | 🔨 In progress                              |
 
-The network now trains: each sample's gradient is computed layer-by-layer,
-averaged over a batch of 60 and applied to the weights, for 100 epochs of
-mini-batch gradient descent (see `src/constants.ts`). Progress and the running
-accuracy are printed per batch while training, and the test split is scored
-image by image at the end of the run.
+Both demos use the same `Network` class:
+
+- **MNIST** (`src/mnist.ts`) — each sample's gradient is computed
+  layer-by-layer, averaged over a batch of 60 and applied to the weights, for
+  `NMIST_EPOCHS` epochs (30 by default). Progress and the running accuracy are
+  printed per batch while training, the test split is scored image by image at
+  the end, and the trained weights are saved to `data/mnist_network.json`.
+- **XOR** (`src/xor.ts`) — the four-row gate fits in one batch, so every epoch
+  is a single full-batch update. Training runs for `XOR_EPOCHS` epochs (50,000
+  by default) and retries up to `XOR_RESTARTS` times with fresh random weights
+  to escape local minima. The best run is saved to `data/xor_network.json` and
+  printed as a truth table.
+
+Hyperparameters live in `src/constants.ts`.
 
 ## How to run
 
 ```sh
-deno check src/main.ts             # type-check all modules
-deno run --allow-read src/main.ts  # load the local MNIST files, train for EPOCHS epochs, score the test split
+deno check src/mnist.ts src/xor.ts        # type-check all modules
+deno run --allow-read --allow-write src/mnist.ts  # train on MNIST, score the test split, save data/mnist_network.json
+deno run --allow-read --allow-write src/xor.ts    # train on XOR and print the truth table, save data/xor_network.json
 ```
+
+`src/mnist.ts` is the MNIST entry point (previously `src/main.ts`, renamed to
+sit alongside `src/xor.ts`).
 
 The MNIST files (.zip) are already shipped inside [`data/mnist/`](./data/mnist).
 The loader reads them from disk (no network download) and gunzips them in
-memory; `--allow-read` grants access to the dataset files. Their paths are
-resolved relative to the loader module, so the command above works from any
-working directory.
+memory; `--allow-read` grants access to the dataset files. `--allow-write` is
+needed because both entry points save their trained weights under `data/`.
+Dataset paths are resolved relative to the loader module, so the commands above
+work from any working directory.
 
 ### Running the tests
 
@@ -47,16 +63,18 @@ deno test --allow-read src/   # 184 tests across the whole suite
 deno lint                     # type-lint the source and the tests
 ```
 
-All tests live in [`src/tests/`](./src/tests), one `*_test.ts` file mirroring
-each source module, plus a shared `test_helpers.ts` (assertion utilities and
-small network harnesses).
+All tests live in [`src/tests/`](./src/tests), with one `*_test.ts` file per
+core module, plus a shared `test_helpers.ts` (assertion utilities and small
+network harnesses). The demo entry points (`mnist.ts` and `xor.ts`) are not
+unit-tested directly; they compose the covered modules.
 
 ## Project structure
 
 ```
 .
 ├── src/
-│   ├── main.ts           # Entry point: loads data, builds the network, trains, scores the test split
+│   ├── mnist.ts          # MNIST entry point: loads data, trains, scores the test split, saves the weights
+│   ├── xor.ts            # XOR dataset + training/evaluation helpers, and its entry point
 │   ├── network.ts        # Network class — layers, sample loading, forward pass, cost, gradients, backprop
 │   ├── layer.ts          # Layer class — weights/bias, z/w/a computation, per-layer gradient
 │   ├── activation.ts     # Activation functions + derivatives (sigmoid, relu, tanh, softmax)
@@ -67,8 +85,10 @@ small network harnesses).
 │   ├── tests/            # Automated test suite (184 tests) + shared test helpers
 │   └── doc_img/          # Screenshots/diagrams referenced from the source comments
 ├── data/
-│   ├── mnist/             # The four zipped MNIST data files (the ones the loader reads)
-│   └── mnist-db/          # The same dataset as per-digit PNG files (not read by the loader)
+│   ├── mnist/               # The four zipped MNIST data files (the ones the loader reads)
+│   ├── mnist-db/            # The same dataset as per-digit PNG files (not read by the loader)
+│   ├── mnist_network.json   # Trained MNIST weights/baises, written by `src/mnist.ts` (gitignored)
+│   └── xor_network.json     # Trained XOR weights/baises, written by `src/xor.ts` (gitignored)
 └── tsconfig.json         # TS configuration (bundler-style, strict)
 ```
 
@@ -76,9 +96,15 @@ All the source lives under `src/`; the module imports are relative (`./types.ts`
 between modules, `../types.ts` from the tests), so the project can be moved or
 renamed without touching a single import path.
 
-## Network architecture
+## Network architectures
 
-Defined by `NETWORK_LAYER_CONFIG` in `src/constants.ts`:
+The `Network` class is dataset-agnostic: the topology, input/output sizes,
+batch size and learning rate are supplied per demo. Both configurations live in
+`src/constants.ts`.
+
+### MNIST — `src/mnist.ts`
+
+Defined by `NMIST_LAYER_CONFIG`:
 
 | Layer    | Neurons            | Activation |
 | -------- | ------------------ | ---------- |
@@ -92,20 +118,45 @@ weight matrix plus a bias vector, initialized randomly in (-1, 1). Total:
 **12960 weights + 42 biases = 13002 parameters** (see
 `Network.parameterCount`).
 
-Training hyperparameters, all in `src/constants.ts`:
+MNIST hyperparameters:
 
 | Constant                    | Value | Meaning                                  |
 | --------------------------- | ----- | ---------------------------------------- |
-| `NETWORK_LEARNING_RATE` (η) | 0.002 | Step size, per sample (see step 6 below) |
-| `BATCH_SIZE`                | 60    | Samples averaged into one weight update  |
-| `EPOCHS`                    | 100   | Passes over the training set             |
+| `NMIST_LEARNING_RATE` (η)   | 0.002 | Step size, per sample (see step 6 below) |
+| `NMIST_BATCH_SIZE`          | 60    | Samples averaged into one weight update  |
+| `NMIST_EPOCHS`              | 30    | Passes over the training set             |
+
+### XOR — `src/xor.ts`
+
+Defined by `XOR_LAYER_CONFIG`:
+
+| Layer  | Neurons                 | Activation |
+| ------ | ----------------------- | ---------- |
+| Input  | 2 (each input is 0 or 1) | —          |
+| Hidden | 4                       | sigmoid    |
+| Output | 2 (gate value 0 or 1)   | softmax    |
+
+A hidden layer is required because XOR is not linearly separable: no single
+straight line separates `00` and `11` from `01` and `10`. The output is
+one-hot encoded, so the gate value `1` is learned as class `1` and `0` as class
+`0`. Total: **12 hidden parameters + 10 output parameters = 22 parameters**.
+
+XOR hyperparameters:
+
+| Constant             | Value  | Meaning                                          |
+| -------------------- | ------ | ------------------------------------------------ |
+| `XOR_LEARNING_RATE`  | 0.5    | Step size, per sample                            |
+| `XOR_BATCH_SIZE`     | 4      | Samples averaged into one weight update (all rows) |
+| `XOR_EPOCHS`         | 50000  | Passes over the training set                     |
+| `XOR_RESTARTS`       | 5      | Fresh random restarts; the best run is kept       |
 
 ## How a training step flows through
 
-1. **`main`**(`src/main.ts`) — every epoch reshuffles the sample order and
-   slices it into batches of `BATCH_SIZE` (60). For each sample in a batch the
-   label 0–9 is converted to a one-hot vector `y` (`Network.loadSample`), e.g.
-   `3 → [0,0,0,1,0,0,0,0,0,0]`.
+1. **`main`** (`src/mnist.ts`) — every epoch reshuffles the sample order and
+   slices it into batches of `NMIST_BATCH_SIZE` (60). For each sample in a batch
+   the label 0–9 is converted to a one-hot vector `y` (`Network.loadSample`),
+   e.g. `3 → [0,0,0,1,0,0,0,0,0,0]`. `src/xor.ts` follows the same flow, but
+   with the four gate rows as a single full batch.
 2. **Forward pass** (`Network.feedForward` → `Layer.calculatePostActivationValues`):
    each hidden/output layer 𝓁 computes its pre-activation
    `z(𝓁) = w(𝓁)·a(𝓁-1) + b(𝓁)` and applies its activation
@@ -119,14 +170,18 @@ Training hyperparameters, all in `src/constants.ts`:
 5. **Batch mean** (`Network.calculateAverageGradient`) — one mean gradient per
    batch, each sample weighted 1/60.
 6. **Weight update** (`Network.backPropagate`) — steps every layer against that
-   mean: `w ← w - η·BATCH_SIZE·∂C/∂w`, `b ← b - η·BATCH_SIZE·∂C/∂b`, with
-   η = 0.002. The BATCH_SIZE factor cancels the 1/60 from step 5, so η stays a
-   per-sample rate.
-7. **Evaluation** — each test image is run through the network on its own,
+   mean: `w ← w - η·batchSize·∂C/∂w`, `b ← b - η·batchSize·∂C/∂b`. On MNIST
+   η = 0.002 and the batch size is 60; on XOR η = 0.5 and the batch covers all
+   4 rows. The batch-size factor cancels the averaging from step 5, so η stays
+   a per-sample rate.
+7. **Evaluation** — each MNIST test image is run through the network on its own,
    logging every 1000th one, and a final summary reports the overall test
-   accuracy. During training each batch reports its cost, a running average cost
-   and the running epoch accuracy, always for the weights _before_ that batch's
-   update.
+   accuracy. XOR is scored over all four rows and printed as a truth table.
+   During training each batch reports its cost, a running average cost and the
+   running epoch accuracy, always for the weights _before_ that batch's update.
+8. **Persistence** — both entry points finish by calling
+   `Network.saveToDisk()`, writing the weights and biases as JSON to
+   `data/mnist_network.json` and `data/xor_network.json` respectively.
 
 ### Notation used in the code
 
@@ -144,6 +199,23 @@ equations in code close to their written math form.
 ## Files in detail
 
 All the paths below are relative to [`src/`](./src).
+
+### `src/mnist.ts`
+
+The MNIST entry point (formerly `src/main.ts`). Loads the dataset with
+`MnistLoader`, builds the 784 → 16 → 16 → 10 network from
+`NMIST_LAYER_CONFIG`, trains it with mini-batch gradient descent, saves
+`data/mnist_network.json`, and finally scores the held-out test split. Progress
+is logged per batch and every 1000th test image.
+
+### `src/xor.ts`
+
+The XOR demo. Exports the gate as `XOR_DATA`, plus `createXorNetwork`,
+`evaluateXor`, `trainXorNetwork` and `printTruthTable`. `trainXorNetwork` runs
+full-batch gradient descent for `XOR_EPOCHS` epochs, restarts with fresh random
+weights up to `XOR_RESTARTS` times, and keeps the run with the best accuracy
+(ties broken by lower cost). When run directly, it saves
+`data/xor_network.json` and prints the learned truth table.
 
 ### `src/mnist_loader.ts`
 
@@ -221,8 +293,9 @@ Ties layers together; owns the current sample's one-hot target `y`, exposes
 `inputLayer` / `outputLayer`, drives the forward pass, and computes the cost.
 `calculateGradient()` returns one `GradientLayer` per trainable layer;
 `calculateAverageGradient()` reduces a batch of them to a single mean gradient;
-`backPropagate()` applies that gradient, scaled by η and `BATCH_SIZE`, to every
-layer. Note that `calculateAverageGradient` pairs a batch up **by entry
+`backPropagate()` applies that gradient, scaled by η and the network's
+`batchSize`, to every layer. `saveToDisk()` persists the trainable layers as
+JSON. Note that `calculateAverageGradient` pairs a batch up **by entry
 position**, so every sample in a batch must list its layers in the same order —
 a sample that disagrees about a layer's `𝓁` at some position is rejected rather
 than averaged.
