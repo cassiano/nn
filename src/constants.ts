@@ -30,6 +30,6 @@ export const XOR_LAYER_CONFIG: InitialLayerData[] = [
 ]
 
 export const XOR_LEARNING_RATE = 0.5 // η, the learning rate
-export const XOR_EPOCHS = 2000
+export const XOR_EPOCHS = 50000
 export const XOR_BATCH_SIZE = 4 // the whole gate fits in one batch
 export const XOR_RESTARTS = 5 // fresh random weights, in case a run stalls
