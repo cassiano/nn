@@ -7,7 +7,6 @@ import {
   makeStandardNetwork,
   makeTinyNetwork,
   makeTinyNetworkWithoutActivation,
-  resetLayerCounter,
 } from './test_helpers.ts'
 import {
   assert,
@@ -102,7 +101,6 @@ Deno.test('Network / constructor builds the expected topology', () => {
 })
 
 Deno.test('Network / constructor rejects a non-784 input layer', () => {
-  resetLayerCounter()
   assertThrows(
     () =>
       new Network(
@@ -111,13 +109,13 @@ Deno.test('Network / constructor rejects a non-784 input layer', () => {
           { name: 'out', size: 10 },
         ],
         0.01,
+        { inputSize: 784 },
       ),
     'Expected input layer size',
   )
 })
 
 Deno.test('Network / constructor rejects a non-10-class output layer', () => {
-  resetLayerCounter()
   assertThrows(
     () =>
       new Network(
@@ -126,6 +124,7 @@ Deno.test('Network / constructor rejects a non-10-class output layer', () => {
           { name: 'out', size: 3 },
         ],
         0.01,
+        { outputSize: 10 },
       ),
     'Expected output layer size',
   )
