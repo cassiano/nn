@@ -14,6 +14,10 @@ import { NumericVector } from './types.ts'
  *
  * @param x The value to rectify.
  * @returns x if positive, 0 otherwise.
+ *
+ * @example
+ * relu(-2) // 0
+ * relu(3) // 3
  */
 export function relu(x: number): number {
   return Math.max(0, x)
@@ -24,6 +28,10 @@ export function relu(x: number): number {
  *
  * @param x The pre-activation value to differentiate at.
  * @returns 1 for x > 0, 0 otherwise.
+ *
+ * @example
+ * reluDerivative(-0.5) // 0
+ * reluDerivative(0.5) // 1
  */
 export function reluDerivative(x: number): number {
   return x > 0 ? 1 : 0
@@ -35,6 +43,10 @@ export function reluDerivative(x: number): number {
  *
  * @param x The value to squash.
  * @returns A value in (0, 1).
+ *
+ * @example
+ * sigmoid(0) // 0.5
+ * sigmoid(2) // ≈ 0.8808
  */
 export function sigmoid(x: number): number {
   if (x >= 0) {
@@ -53,6 +65,9 @@ export function sigmoid(x: number): number {
  *
  * @param x The pre-activation value to differentiate at.
  * @returns s(1 - s) with s = sigmoid(x), in (0, 0.25].
+ *
+ * @example
+ * sigmoidDerivative(0) // 0.25
  */
 export function sigmoidDerivative(x: number): number {
   const s = sigmoid(x)
@@ -65,6 +80,10 @@ export function sigmoidDerivative(x: number): number {
  *
  * @param x The value to squash.
  * @returns A value in (-1, 1).
+ *
+ * @example
+ * tanh(0) // 0
+ * tanh(1) // ≈ 0.7616
  */
 export function tanh(x: number): number {
   return Math.tanh(x)
@@ -75,6 +94,9 @@ export function tanh(x: number): number {
  *
  * @param x The pre-activation value to differentiate at.
  * @returns 1 - tanh(x)², in (0, 1].
+ *
+ * @example
+ * tanhDerivative(0) // 1
  */
 export function tanhDerivative(x: number): number {
   const t = tanh(x)
@@ -97,6 +119,10 @@ export function tanhDerivative(x: number): number {
  * temperatures flatten the distribution, lower ones sharpen it. Must be
  * non-negative; 0 yields a one-hot argmax distribution.
  * @returns One probability per neuron, summing to 1.
+ *
+ * @example
+ * softmax([1, 2, 3]) // ≈ [0.0900, 0.2447, 0.6652]
+ * softmax([1, 1], 0) // [0.5, 0.5]
  */
 export function softmax(logits: NumericVector, temperature = 1): NumericVector {
   if (temperature < 0)

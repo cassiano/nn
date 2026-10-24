@@ -12,6 +12,10 @@ import { NumericMatrix, NumericVector, Gradient } from './types.ts'
  * @param withinBounds Clamps values outside the source range to the nearest
  * projected endpoint instead of extrapolating.
  * @returns The value projected onto the target range.
+ *
+ * @example
+ * map(0.5, 0, 1, 0, 10) // 5
+ * map(2, 0, 1, 0, 10, true) // 10
  */
 export const map = (
   value: number,
@@ -45,6 +49,11 @@ export const map = (
  * @param count How many indices to visit.
  * @param fn Called with each index in turn.
  * @returns Nothing; `fn`'s own return value, if any, is discarded.
+ *
+ * @example
+ * const seen: number[] = []
+ * timesForEach(3, i => seen.push(i))
+ * // seen => [0, 1, 2]
  */
 export const timesForEach = (count: number, fn: (i: number) => void): void => {
   for (let i = 0; i < count; i++) fn(i)
@@ -56,6 +65,9 @@ export const timesForEach = (count: number, fn: (i: number) => void): void => {
  * @param count How many entries the result holds.
  * @param fn Called with each index in turn to produce that slot's value.
  * @returns An array of `count` entries, in index order.
+ *
+ * @example
+ * timesMap(3, i => i * 2) // [0, 2, 4]
  */
 export const timesMap = <T>(count: number, fn: (index: number) => T): T[] => {
   const results: T[] = []
@@ -73,6 +85,9 @@ export const timesMap = <T>(count: number, fn: (index: number) => T): T[] => {
  * @param initialAcc Seed to start from. Omitting it starts the accumulator at 0
  * with the first index being 1, so index 0 is never folded in.
  * @returns The accumulated value after the last index.
+ *
+ * @example
+ * timesReduce(4, (sum, i) => sum + i, 0) // 6
  */
 export const timesReduce = <T>(
   count: number,
@@ -93,6 +108,11 @@ export const timesReduce = <T>(
  * @param collection The collection to traverse, left unmodified.
  * @param fn Called with each element and its index, last element first.
  * @returns Nothing; `fn`'s own return value, if any, is discarded.
+ *
+ * @example
+ * const order: number[] = []
+ * reversedForEach([10, 20, 30], value => order.push(value))
+ * // order => [30, 20, 10]
  */
 export const reversedForEach = <T>(
   collection: T[],
@@ -155,6 +175,10 @@ export const timesMapN = <T, D extends number[]>(
  * @param dimensions Size of the space along each axis, outermost first.
  * @param callback Called with one index per dimension, in the same order.
  * @returns Nothing; `callback`'s own return value, if any, is discarded.
+ *
+ * @example
+ * timesForEachN([2, 2], (row, col) => console.log(row, col))
+ * // logs 0 0, 0 1, 1 0, 1 1
  */
 export const timesForEachN = <T, D extends number[]>(
   dimensions: [...D],
@@ -189,6 +213,11 @@ export const timesForEachN = <T, D extends number[]>(
  *
  * @param val The value to check.
  * @throws If `val` is `undefined`.
+ *
+ * @example
+ * const maybeName: string | undefined = 'Ada'
+ * assertIsNotUndefined(maybeName)
+ * maybeName.toUpperCase() // 'ADA'
  */
 export function assertIsNotUndefined<T>(
   val: T | undefined | null,
@@ -205,6 +234,11 @@ export function assertIsNotUndefined<T>(
  *
  * @param val The value to check.
  * @throws If `val` is `null`.
+ *
+ * @example
+ * const maybeName: string | null = 'Ada'
+ * assertIsNotNull(maybeName)
+ * maybeName.toUpperCase() // 'ADA'
  */
 export function assertIsNotNull<T>(
   val: T | undefined | null,
@@ -218,6 +252,11 @@ export function assertIsNotNull<T>(
  *
  * @param val The value to check.
  * @throws If `val` is `undefined` or `null`.
+ *
+ * @example
+ * const maybeName: string | undefined | null = 'Ada'
+ * assertIsNotUndefinedOrNull(maybeName)
+ * maybeName.toUpperCase() // 'ADA'
  */
 export function assertIsNotUndefinedOrNull<T>(
   val: T | undefined | null,
@@ -295,6 +334,9 @@ export const createVector = (
  * @param right The second operand, of the same shape as `left`.
  * @returns A new matrix holding `left` + `right` cell by cell.
  * @throws If the two matrices do not have the same shape.
+ *
+ * @example
+ * addMatrices([[1, 2]], [[3, 4]]) // [[4, 6]]
  */
 export const addMatrices = (
   left: NumericMatrix,
@@ -337,6 +379,10 @@ export const addMatrices = (
  * @param right The second operand, whose columns match `left`'s width.
  * @returns A new matrix of `left`'s rows by `right`'s columns.
  * @throws If the operands are not inner-dimension compatible.
+ *
+ * @example
+ * multiplyMatrices([[1, 2], [3, 4]], [[5, 6], [7, 8]])
+ * // [[19, 22], [43, 50]]
  */
 export const multiplyMatrices = (
   left: NumericMatrix,
@@ -380,6 +426,9 @@ export const multiplyMatrices = (
  * @returns A new vector with one entry per row of `matrix`.
  * @throws {Error} If any row of `matrix` and `vector` have different lengths,
  * propagated from {@link dotProduct}.
+ *
+ * @example
+ * multiplyMatrixByVector([[1, 2], [3, 4]], [5, 6]) // [17, 39]
  */
 export const multiplyMatrixByVector = (
   matrix: NumericMatrix,
@@ -411,6 +460,10 @@ export const multiplyMatrixByVector = (
  *
  * @param matrix The matrix to reflect.
  * @returns A new matrix with the rows and columns exchanged.
+ *
+ * @example
+ * transposeMatrix([[1, 2, 3], [4, 5, 6]])
+ * // [[1, 4], [2, 5], [3, 6]]
  */
 export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
   const rows = matrix.length
@@ -437,6 +490,9 @@ export const transposeMatrix = (matrix: NumericMatrix): NumericMatrix => {
  * @param matrix The matrix to scale.
  * @param scalar The factor applied to every entry.
  * @returns A new matrix of the same shape.
+ *
+ * @example
+ * multiplyMatrixByScalar([[1, 2]], 3) // [[3, 6]]
  */
 export const multiplyMatrixByScalar = (
   matrix: NumericMatrix,
@@ -466,6 +522,9 @@ export const multiplyMatrixByScalar = (
  * @param scalar The divisor applied to every entry.
  * @returns A new matrix of the same shape.
  * @throws If `scalar` is 0, rather than filling the matrix with Infinity/NaN.
+ *
+ * @example
+ * divideMatrixByScalar([[2, 4]], 2) // [[1, 2]]
  */
 export const divideMatrixByScalar = (
   matrix: NumericMatrix,
@@ -483,6 +542,9 @@ export const divideMatrixByScalar = (
  * @param right The second operand, of the same length as `left`.
  * @returns A new vector holding `left` * `right` entry by entry.
  * @throws If the two vectors have different lengths.
+ *
+ * @example
+ * hadamardProduct([1, 2], [3, 4]) // [3, 8]
  */
 export const hadamardProduct = (
   left: NumericVector,
@@ -509,6 +571,9 @@ export const hadamardProduct = (
  * @returns The scalar `Σ left[i] * right[i]`.
  * @throws {Error} If the two vectors have different lengths, rather than
  * silently multiplying over the shorter one.
+ *
+ * @example
+ * dotProduct([1, 2], [3, 4]) // 11
  */
 export const dotProduct = (
   left: NumericVector,
@@ -536,6 +601,9 @@ export const dotProduct = (
  * different length from `left`; no size check is needed.
  * @returns A new matrix with one row per entry of `left` and one column per
  * entry of `right`.
+ *
+ * @example
+ * outerProduct([1, 2], [3, 4]) // [[3, 4], [6, 8]]
  */
 export const outerProduct = (
   left: NumericVector,
@@ -562,6 +630,9 @@ export const outerProduct = (
  * @param right The second operand, of the same length as `left`.
  * @returns A new vector holding `left` + `right` entry by entry.
  * @throws If the two vectors have different lengths.
+ *
+ * @example
+ * addVectors([1, 2], [3, 4]) // [4, 6]
  */
 export const addVectors = (
   left: NumericVector,
@@ -585,6 +656,9 @@ export const addVectors = (
  * @param vector The vector to scale.
  * @param scalar The factor applied to every entry.
  * @returns A new vector of the same length.
+ *
+ * @example
+ * multiplyVectorByScalar([1, 2], 3) // [3, 6]
  */
 export const multiplyVectorByScalar = (
   vector: NumericVector,
@@ -604,6 +678,9 @@ export const multiplyVectorByScalar = (
  * @param scalar The divisor applied to every entry.
  * @returns A new vector of the same length.
  * @throws If `scalar` is 0.
+ *
+ * @example
+ * divideVectorByScalar([2, 4], 2) // [1, 2]
  */
 export const divideVectorByScalar = (
   vector: NumericVector,
@@ -620,6 +697,10 @@ export const divideVectorByScalar = (
  * @param min Lower bound, included.
  * @param max Upper bound, excluded.
  * @returns A number in [min, max).
+ *
+ * @example
+ * const value = random(0, 10)
+ * value >= 0 && value < 10 // true
  */
 export const random = (min = 0, max = 1): number =>
   Math.random() * (max - min) + min
@@ -630,6 +711,10 @@ export const random = (min = 0, max = 1): number =>
  *
  * @param array The array to permute, modified in place.
  * @returns Nothing; `array` is reordered in place.
+ *
+ * @example
+ * const items = [1, 2, 3]
+ * shuffle(items) // items is still a permutation of [1, 2, 3]
  */
 export const shuffle = <T>(array: T[]): void => {
   for (let i = array.length - 1; i > 0; i--) {

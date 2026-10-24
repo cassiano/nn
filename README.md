@@ -68,6 +68,84 @@ core module, plus a shared `test_helpers.ts` (assertion utilities and small
 network harnesses). The demo entry points (`mnist.ts` and `xor.ts`) are not
 unit-tested directly; they compose the covered modules.
 
+## Usage examples
+
+Every public function, class and method has a short `@example` in its JSDoc
+comment (visible in your editor or via `deno doc`). A few representative calls:
+
+```ts
+import { Network } from './src/network.ts'
+
+// Build the XOR topology: 2 inputs -> 4 sigmoid hidden -> 2 softmax outputs.
+const network = new Network(
+  [
+    { name: 'Input Layer', size: 2 },
+    { name: 'Hidden Layer', size: 4, σ: 'sigmoid' },
+    { name: 'Output Layer', size: 2, σ: 'softmax' },
+  ],
+  0.5,
+  { inputSize: 2, outputSize: 2, batchSize: 4 },
+)
+
+network.parameterCount // 22
+network.loadSample([0, 1], 1) // y = [0, 1]
+network.feedForward()
+network.predictedClass() // 0 or 1
+network.cost // current squared error
+
+// One gradient step for the loaded sample.
+network.backPropagate(network.calculateGradient())
+
+// Persist the trainable layers (writes data/<filename>).
+await network.saveToDisk('example_network.json')
+```
+
+```ts
+import {
+  XOR_DATA,
+  createXorNetwork,
+  evaluateXor,
+  printTruthTable,
+  trainXorNetwork,
+} from './src/xor.ts'
+
+const untrained = evaluateXor(createXorNetwork())
+untrained.rows.length // 4
+
+const best = trainXorNetwork(XOR_DATA)
+printTruthTable(best.evaluation)
+```
+
+```ts
+import { MnistLoader } from './src/mnist_loader.ts'
+
+const loader = new MnistLoader()
+await loader.load(message => console.log(message))
+loader.trainingData?.inputs.length // 60000
+console.log(loader.imageAsText('trainingData', 0))
+```
+
+```ts
+import { softmax } from './src/activation.ts'
+import {
+  addVectors,
+  dotProduct,
+  map,
+  multiplyMatrixByVector,
+  gradientAsVector,
+} from './src/utils.ts'
+
+softmax([1, 2, 3]) // ≈ [0.0900, 0.2447, 0.6652]
+map(0.5, 0, 1, 0, 10) // 5
+dotProduct([1, 2], [3, 4]) // 11
+multiplyMatrixByVector([[1, 2], [3, 4]], [5, 6]) // [17, 39]
+addVectors([1, 2], [3, 4]) // [4, 6]
+gradientAsVector([
+  { 𝓁: 2, w: [[4], [5]], b: [6] },
+  { 𝓁: 1, w: [[1, 2]], b: [3] },
+]) // [1, 2, 3, 4, 5, 6]
+```
+
 ## Project structure
 
 ```
@@ -87,8 +165,8 @@ unit-tested directly; they compose the covered modules.
 ├── data/
 │   ├── mnist/               # The four zipped MNIST data files (the ones the loader reads)
 │   ├── mnist-db/            # The same dataset as per-digit PNG files (not read by the loader)
-│   ├── mnist_network.json   # Trained MNIST weights/baises, written by `src/mnist.ts` (gitignored)
-│   └── xor_network.json     # Trained XOR weights/baises, written by `src/xor.ts` (gitignored)
+│   ├── mnist_network.json   # Trained MNIST weights/biases, written by `src/mnist.ts` (gitignored)
+│   └── xor_network.json     # Trained XOR weights/biases, written by `src/xor.ts` (gitignored)
 └── tsconfig.json         # TS configuration (bundler-style, strict)
 ```
 

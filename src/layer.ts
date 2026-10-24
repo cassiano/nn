@@ -21,6 +21,17 @@ export type ActivationFunctionType = 'sigmoid' | 'relu' | 'tanh' | 'softmax'
  *
  * The input layer is the exception: it only stores the raw inputs in `a` and
  * has no parameters or activation.
+ *
+ * @example
+ * const network = new Network(
+ *   [
+ *     { name: 'input', size: 2 },
+ *     { name: 'hidden', size: 4, σ: 'sigmoid' },
+ *     { name: 'output', size: 2, σ: 'softmax' },
+ *   ],
+ *   0.5,
+ * )
+ * network.layers[1].size // 4
  */
 export class Layer {
   /** Position within the network: 0 for the input layer, up to 𝐋 for the output layer. */
@@ -52,6 +63,12 @@ export class Layer {
    * @param σ Activation applied to z to produce a.
    * @returns Nothing; the layer registers itself with its network.
    * @throws If no previous layer exists yet to size w against.
+   *
+   * @example
+   * const network = new Network([{ name: 'input', size: 2 }], 0.5)
+   * const hidden = new Layer(network, 'hidden', 4, 'sigmoid')
+   * hidden.w.length // 4
+   * hidden.w[0].length // 2
    */
   constructor(
     public network: Network,
@@ -66,29 +83,57 @@ export class Layer {
     if (!this.isInputLayer) this.initializeNetworkParameters()
   }
 
-  /** How many parameters this layer owns: its weights plus its biases. */
+  /**
+   * How many parameters this layer owns: its weights plus its biases.
+   *
+   * @example
+   * // A 4-neuron layer after a 2-neuron input has 4*2 weights + 4 biases.
+   * network.layers[1].parameterCount // 12
+   */
   get parameterCount(): number {
     return this.isInputLayer
       ? 0
       : this.w.length * (this.w[0]?.length ?? 0) + this.b.length
   }
 
-  /** The layer feeding into this one. */
+  /**
+   * The layer feeding into this one.
+   *
+   * @example
+   * network.layers[1].previousLayer === network.inputLayer // true
+   */
   get previousLayer(): Layer {
     return this.network.previousLayer(this.𝓁)
   }
 
-  /** The layer fed by this one, which backpropagation uses to carry δ further back. */
+  /**
+   * The layer fed by this one, which backpropagation uses to carry δ further back.
+   *
+   * @example
+   * network.layers[1].nextLayer === network.outputLayer // true
+   */
   get nextLayer(): Layer {
     return this.network.nextLayer(this.𝓁)
   }
 
-  /** Whether this is the network's first layer. */
+  /**
+   * Whether this is the network's first layer.
+   *
+   * @example
+   * network.inputLayer.isInputLayer // true
+   * network.outputLayer.isInputLayer // false
+   */
   get isInputLayer(): boolean {
     return this.𝓁 === 0
   }
 
-  /** Whether this is the network's last layer, whose activations are the prediction. */
+  /**
+   * Whether this is the network's last layer, whose activations are the prediction.
+   *
+   * @example
+   * network.outputLayer.isOutputLayer // true
+   * network.inputLayer.isOutputLayer // false
+   */
   get isOutputLayer(): boolean {
     return this.𝓁 === this.network.𝐋
   }
@@ -99,6 +144,11 @@ export class Layer {
    *
    * @returns Nothing; {@link Layer.z} and {@link Layer.a} are updated in place.
    * @throws If σ is missing, or if the incoming dimensions do not line up.
+   *
+   * @example
+   * network.inputLayer.a = [0.5, 0.9]
+   * network.layers[1].calculatePostActivationValues()
+   * network.layers[1].a.length // 4
    */
   calculatePostActivationValues(): void {
     this.calculatePreActivationValues()
@@ -111,6 +161,10 @@ export class Layer {
    *
    * @returns The derivative of this layer's activation.
    * @throws If σ is missing.
+   *
+   * @example
+   * const sigmoidLayer = network.layers[1] // σ: 'sigmoid'
+   * sigmoidLayer.σDerivativeFn(0) // 0.25
    */
   get σDerivativeFn(): (z: number) => number {
     if (this.σ === undefined)

@@ -57,6 +57,18 @@ export class Network {
    * @returns Nothing; the layers are stored on the network.
    * @throws If the architecture does not match the expected input/output sizes,
    * or if the batch size is not positive.
+   *
+   * @example
+   * const network = new Network(
+   *   [
+   *     { name: 'input', size: 2 },
+   *     { name: 'hidden', size: 4, σ: 'sigmoid' },
+   *     { name: 'output', size: 2, σ: 'softmax' },
+   *   ],
+   *   0.5,
+   *   { inputSize: 2, outputSize: 2, batchSize: 4 },
+   * )
+   * network.parameterCount // 22
    */
   constructor(
     layersData: InitialLayerData[],
@@ -89,17 +101,33 @@ export class Network {
       )
   }
 
-  /** First layer, holding the raw inputs. */
+  /**
+   * First layer, holding the raw inputs.
+   *
+   * @example
+   * network.inputLayer.size // 2
+   */
   get inputLayer(): Layer {
     return this.layers[0]
   }
 
-  /** Last layer, whose activations are the network's prediction. */
+  /**
+   * Last layer, whose activations are the network's prediction.
+   *
+   * @example
+   * network.outputLayer.size // 2
+   */
   get outputLayer(): Layer {
     return this.layers[this.𝐋]
   }
 
-  /** Total number of trainable parameters across the layers. */
+  /**
+   * Total number of trainable parameters across the layers.
+   *
+   * @example
+   * // 2 -> 4 -> 2: (4*2 + 4) + (2*4 + 2)
+   * network.parameterCount // 22
+   */
   get parameterCount(): number {
     return this.layers.reduce((count, layer) => count + layer.parameterCount, 0)
   }
@@ -110,6 +138,9 @@ export class Network {
    * @param 𝓁 Index of the layer whose predecessor is wanted.
    * @returns The layer at 𝓁 - 1.
    * @throws If 𝓁 is 0, the input layer having no predecessor.
+   *
+   * @example
+   * network.previousLayer(2) === network.layers[1] // true
    */
   previousLayer(𝓁: number): Layer {
     if (𝓁 === 0) throw new Error('Input layer does not have a previous one')
@@ -123,6 +154,9 @@ export class Network {
    * @param 𝓁 Index of the layer whose successor is wanted.
    * @returns The layer at 𝓁 + 1.
    * @throws If 𝓁 is 𝐋, the output layer having no successor.
+   *
+   * @example
+   * network.nextLayer(1) === network.layers[2] // true
    */
   nextLayer(𝓁: number): Layer {
     if (𝓁 === this.𝐋) throw new Error('Output layer does not have a next one')
@@ -142,6 +176,11 @@ export class Network {
    * @returns Nothing; the sample is stored on the network.
    * @throws If `inputs` is not the input layer's size, or if `label` is not a
    * class the output layer can hold.
+   *
+   * @example
+   * network.loadSample([0, 1], 1)
+   * network.inputLayer.a // [0, 1]
+   * network.y // [0, 1]
    */
   loadSample(inputs: NumericVector, label: number): void {
     if (inputs.length !== this.inputLayer.size)
@@ -163,6 +202,11 @@ export class Network {
    * Forward pass: recompute a and z from the input layer up to the output layer.
    *
    * @returns Nothing; each layer's state is updated in place.
+   *
+   * @example
+   * network.loadSample([0, 1], 1)
+   * network.feedForward()
+   * network.outputLayer.a.length // 2
    */
   feedForward(): void {
     for (let 𝓁 = 1; 𝓁 <= this.𝐋; 𝓁++)
@@ -176,6 +220,11 @@ export class Network {
    * Unnormalized, which only rescales the gradient: the batch mean divides by
    * the batch size and the update multiplies it back, so η stays the per-sample
    * rate.
+   *
+   * @example
+   * network.y = [1, 0]
+   * network.outputLayer.a = [1, 0]
+   * network.cost // 0
    */
   get cost(): number {
     return timesMap(
@@ -184,7 +233,12 @@ export class Network {
     ).reduce((acc, item) => acc + item)
   }
 
-  /** Index of the output layer, which is also how many layers are trainable. */
+  /**
+   * Index of the output layer, which is also how many layers are trainable.
+   *
+   * @example
+   * network.𝐋 // 2 (input at 0, hidden at 1, output at 2)
+   */
   get 𝐋(): number {
     return this.layers.length - 1
   }
@@ -194,6 +248,10 @@ export class Network {
    * output neuron with the highest activation.
    *
    * @returns The index of the highest activation, 0-based.
+   *
+   * @example
+   * network.outputLayer.a = [0.1, 0.9]
+   * network.predictedClass() // 1
    */
   predictedClass(): number {
     const highestActivation = Math.max(...this.outputLayer.a)
@@ -214,6 +272,12 @@ export class Network {
    *
    * @returns One {@link GradientLayer} per trainable layer, output layer first.
    * @throws If a layer is missing its activation function, needed for σ'.
+   *
+   * @example
+   * network.loadSample([0, 1], 1)
+   * network.feedForward()
+   * const gradient = network.calculateGradient()
+   * gradient[0].𝓁 // 2 (the output layer comes first)
    */
   calculateGradient(): Gradient {
     const gradient: Gradient = []
@@ -276,6 +340,14 @@ export class Network {
    * @returns Nothing; each layer's parameters are updated in place.
    * @throws If an entry's 𝓁 is not a layer of this network, or if a gradient
    * shape does not line up with the parameters it is applied to.
+   *
+   * @example
+   * network.loadSample([0, 1], 1)
+   * network.feedForward()
+   * const before = network.cost
+   * network.backPropagate(network.calculateGradient())
+   * network.feedForward()
+   * // with a suitable η, the cost is now lower
    */
   backPropagate(gradient: Gradient): void {
     for (const { 𝓁, b, w } of gradient) {
@@ -307,6 +379,14 @@ export class Network {
    * @param gradients One {@link Gradient} per sample.
    * @returns The mean gradient, in the first sample's order.
    * @throws If `gradients` is empty, or if the samples disagree about the layers.
+   *
+   * @example
+   * const batch = XOR_DATA.inputs.map((inputs, i) => {
+   *   network.loadSample(inputs, XOR_DATA.labels[i])
+   *   network.feedForward()
+   *   return network.calculateGradient()
+   * })
+   * const meanGradient = network.calculateAverageGradient(batch)
    */
   calculateAverageGradient(gradients: Gradient[]): Gradient {
     if (gradients.length === 0)
@@ -359,6 +439,10 @@ export class Network {
    * inspection or reuse. The input layer has no parameters and is omitted.
    *
    * @param filename The filename to save the network to.
+   *
+   * @example
+   * await network.saveToDisk('xor_network.json')
+   * // writes data/xor_network.json
    */
   async saveToDisk(filename: string) {
     await Deno.writeTextFile(

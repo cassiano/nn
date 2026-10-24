@@ -49,6 +49,12 @@ const MNIST_PATHS = {
 /**
  * Reads the MNIST dataset from the local gzipped IDX files into
  * `trainingData` / `testData`, with pixels normalized to [0, 1].
+ *
+ * @example
+ * const loader = new MnistLoader()
+ * await loader.load(console.log)
+ * loader.trainingData?.inputs.length // 60000
+ * loader.testData?.inputs.length // 10000
  */
 export class MnistLoader {
   /** The parsed training split, or `null` until {@link MnistLoader.load} runs. */
@@ -67,6 +73,11 @@ export class MnistLoader {
    * @param onProgress Called with status messages as each file is read.
    * @returns Nothing; the parsed splits are stored on the loader.
    * @throws If a file is missing, is not valid gzip, or has the wrong magic number.
+   *
+   * @example
+   * const loader = new MnistLoader()
+   * await loader.load(message => console.log(message))
+   * loader.loaded // true
    */
   async load(onProgress?: (msg: string) => void): Promise<void> {
     if (this.loaded) return
@@ -207,6 +218,11 @@ export class MnistLoader {
    * @param index Position of the image within that split.
    * @returns The image as text, one line per row of pixels.
    * @throws If the dataset has not been loaded, or the index is out of bounds.
+   *
+   * @example
+   * const loader = new MnistLoader()
+   * await loader.load()
+   * console.log(loader.imageAsText('trainingData', 0))
    */
   imageAsText(type: 'trainingData' | 'testData', index: number): string {
     assertIsNotNull(this.trainingData)
@@ -225,6 +241,10 @@ export class MnistLoader {
    *
    * @param image One flattened image, row-major.
    * @returns The image as text, one line per row of pixels.
+   *
+   * @example
+   * const blank = new Array(MNIST_IMAGE_ROWS * MNIST_IMAGE_COLS).fill(0)
+   * MnistLoader.imageToText(blank).split('\n')[0] // 56 spaces
    */
   static imageToText(image: number[]): string {
     let text = ''

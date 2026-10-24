@@ -18,6 +18,10 @@ import { formatPercentageWithDecimalPlaces, timesForEach } from './utils.ts'
 /**
  * The XOR gate as a dataset: the four possible input pairs and the value the
  * gate outputs for each. The output is 1 when the inputs differ, 0 otherwise.
+ *
+ * @example
+ * XOR_DATA.inputs // [[0, 0], [0, 1], [1, 0], [1, 1]]
+ * XOR_DATA.labels // [0, 1, 1, 0]
  */
 export const XOR_DATA: TrainingData = {
   inputs: [
@@ -75,6 +79,10 @@ export type XorTrainingResult = {
  *
  * @param η The learning rate. Defaults to {@link XOR_LEARNING_RATE}.
  * @returns A network ready to be trained on {@link XOR_DATA}.
+ *
+ * @example
+ * const network = createXorNetwork()
+ * network.parameterCount // 22
  */
 export function createXorNetwork(η: number = XOR_LEARNING_RATE): Network {
   return new Network(XOR_LAYER_CONFIG, η, {
@@ -90,6 +98,11 @@ export function createXorNetwork(η: number = XOR_LEARNING_RATE): Network {
  * @param network The network to score.
  * @param data The dataset to score it on. Defaults to {@link XOR_DATA}.
  * @returns The hits, the misses and one row per sample.
+ *
+ * @example
+ * const result = evaluateXor(createXorNetwork())
+ * result.rows.length // 4
+ * result.accuracy // value in [0, 1]
  */
 export function evaluateXor(
   network: Network,
@@ -170,6 +183,11 @@ function trainEpoch(network: Network, data: TrainingData): number {
  * @param epochs How many epochs each run takes. Defaults to {@link XOR_EPOCHS}.
  * @param restarts How many attempts are made. Defaults to {@link XOR_RESTARTS}.
  * @returns The best run: its network, its cost and how the gate was scored.
+ *
+ * @example
+ * const result = trainXorNetwork()
+ * console.log(result.evaluation.accuracy)
+ * await result.network.saveToDisk('xor_network.json')
  */
 export function trainXorNetwork(
   data: TrainingData = XOR_DATA,
@@ -219,6 +237,10 @@ export function trainXorNetwork(
  *
  * @param evaluation The scored gate.
  * @returns Nothing; the table is logged.
+ *
+ * @example
+ * const result = trainXorNetwork()
+ * printTruthTable(result.evaluation)
  */
 export function printTruthTable(evaluation: XorEvaluation): void {
   console.log('--------')
