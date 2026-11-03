@@ -24,10 +24,30 @@ import { timesForEach } from './utils.ts'
 let network: Network
 let loader: MnistLoader
 
+/** File holding the network's weights and biases, under the project's data/ directory. */
+const MNIST_NETWORK_FILENAME = 'mnist_network.json'
+
+/**
+ * Command-line flag that makes the network start from the weights and biases
+ * saved in {@link MNIST_NETWORK_FILENAME} instead of fresh random ones.
+ */
+const LOAD_INITIAL_PARAMETERS_FLAG = '-l'
+
+/**
+ * Command-line flag that skips training entirely and goes straight to scoring
+ * the test split, with or without {@link LOAD_INITIAL_PARAMETERS_FLAG}.
+ */
+const SKIP_TRAINING_FLAG = '-s'
+
 /**
  * Entry point: loads MNIST, builds the network from
  * {@link NMIST_LAYER_CONFIG}, trains it with mini-batch gradient descent for
  * {@link NMIST_EPOCHS} epochs, then scores it on the test split.
+ *
+ * Pass `-l` to start from the weights and biases in
+ * {@link MNIST_NETWORK_FILENAME}; without it the network is randomly
+ * initialized as usual. Pass `-s` to skip training and score the test split
+ * right away, using either the random parameters or the ones loaded with `-l`.
  *
  * Each epoch reshuffles the samples and walks whole batches of
  * {@link NMIST_BATCH_SIZE}: the gradients of the batch are collected, averaged and
@@ -35,6 +55,10 @@ let loader: MnistLoader
  * as they were *before* that step.
  */
 const main = async () => {
+  const args = new Set(Deno.args)
+  const shouldLoadInitialParameters = args.has(LOAD_INITIAL_PARAMETERS_FLAG)
+  const shouldSkipTraining = args.has(SKIP_TRAINING_FLAG)
+
   // Load the MNIST dataset from the zipped IDX files in the project's
   // data/mnist directory.
   loader = new MnistLoader()
@@ -49,57 +73,67 @@ const main = async () => {
     batchSize: NMIST_BATCH_SIZE,
   })
 
+  if (shouldLoadInitialParameters) {
+    await network.loadFromDisk(MNIST_NETWORK_FILENAME)
+    console.log(`Loaded initial parameters from ${MNIST_NETWORK_FILENAME}`)
+  }
+
   console.log({ parameterCount: network.parameterCount })
 
-  const { inputs, labels } = loader.trainingData
-  const totalBatches = Math.trunc(inputs.length / NMIST_BATCH_SIZE)
-  const trainingDataIndexes = timesMap(inputs.length, i => i)
-
-  let avgCost = 0
   let hits: number
   let misses: number
 
-  timesForEach(NMIST_EPOCHS, epochIdx => {
-    hits = 0
-    misses = 0
+  if (shouldSkipTraining) {
+    console.log('Skipping training')
+  } else {
+    const { inputs, labels } = loader.trainingData
+    const totalBatches = Math.trunc(inputs.length / NMIST_BATCH_SIZE)
+    const trainingDataIndexes = timesMap(inputs.length, i => i)
 
-    shuffle(trainingDataIndexes)
+    let avgCost = 0
 
-    timesForEach(totalBatches, batchIdx => {
-      const batchGradients = timesMap(NMIST_BATCH_SIZE, batchImageIdx => {
-        const sampleIndex =
-          trainingDataIndexes[batchIdx * NMIST_BATCH_SIZE + batchImageIdx]
+    timesForEach(NMIST_EPOCHS, epochIdx => {
+      hits = 0
+      misses = 0
 
-        network.loadSample(inputs[sampleIndex], labels[sampleIndex])
-        network.feedForward()
+      shuffle(trainingDataIndexes)
 
-        const predicted = network.predictedClass()
+      timesForEach(totalBatches, batchIdx => {
+        const batchGradients = timesMap(NMIST_BATCH_SIZE, batchImageIdx => {
+          const sampleIndex =
+            trainingDataIndexes[batchIdx * NMIST_BATCH_SIZE + batchImageIdx]
 
-        if (predicted === labels[sampleIndex]) hits++
-        else misses++
+          network.loadSample(inputs[sampleIndex], labels[sampleIndex])
+          network.feedForward()
 
-        return network.calculateGradient()
-      })
+          const predicted = network.predictedClass()
 
-      network.backPropagate(network.calculateAverageGradient(batchGradients))
+          if (predicted === labels[sampleIndex]) hits++
+          else misses++
 
-      avgCost =
-        ((epochIdx * totalBatches + batchIdx) * avgCost + network.cost) /
-        (epochIdx * totalBatches + (batchIdx + 1))
+          return network.calculateGradient()
+        })
 
-      console.log({
-        epoch: `${epochIdx + 1}/${NMIST_EPOCHS}`,
-        batch: `${batchIdx + 1}/${totalBatches}`,
-        cost: network.cost,
-        hits,
-        misses,
-        avgCost,
-        epochAccuracy: `${formatPercentageWithDecimalPlaces(hits / ((batchIdx + 1) * NMIST_BATCH_SIZE), 2)}%`,
+        network.backPropagate(network.calculateAverageGradient(batchGradients))
+
+        avgCost =
+          ((epochIdx * totalBatches + batchIdx) * avgCost + network.cost) /
+          (epochIdx * totalBatches + (batchIdx + 1))
+
+        console.log({
+          epoch: `${epochIdx + 1}/${NMIST_EPOCHS}`,
+          batch: `${batchIdx + 1}/${totalBatches}`,
+          cost: network.cost,
+          hits,
+          misses,
+          avgCost,
+          epochAccuracy: `${formatPercentageWithDecimalPlaces(hits / ((batchIdx + 1) * NMIST_BATCH_SIZE), 2)}%`,
+        })
       })
     })
-  })
 
-  network.saveToDisk('mnist_network.json')
+    network.saveToDisk(MNIST_NETWORK_FILENAME)
+  }
 
   console.log('-----------------------------------------')
   console.log('Checking network accuracy with test data:')
@@ -136,7 +170,7 @@ const main = async () => {
   console.log('--------------')
 
   console.log({
-    epochs: NMIST_EPOCHS,
+    epochs: shouldSkipTraining ? 0 : NMIST_EPOCHS,
     η: network.η,
     cost: network.cost,
     hits,

@@ -11,6 +11,7 @@ import {
 } from './utils.ts'
 import {
   NumericVector,
+  NumericMatrix,
   InitialLayerData,
   GradientLayer,
   Gradient,
@@ -455,5 +456,69 @@ export class Network {
         2,
       ),
     )
+  }
+
+  /**
+   * Loads weights and biases previously written by {@link Network.saveToDisk},
+   * replacing the parameters of the matching layers. The file only supplies the
+   * parameters; the topology is still the one the network was built with, so
+   * the two must agree.
+   *
+   * @param filename The filename to load the network from.
+   * @returns Nothing; each matching layer's parameters are replaced in place.
+   * @throws If the file is missing, or if a saved layer or parameter shape does
+   * not line up with this network, or if a layer is missing or duplicated.
+   *
+   * @example
+   * await network.loadFromDisk('xor_network.json')
+   * // reads data/xor_network.json
+   */
+  async loadFromDisk(filename: string): Promise<void> {
+    const savedLayers = JSON.parse(
+      await Deno.readTextFile(`${import.meta.dirname}/../data/${filename}`),
+    ) as { 𝓁: number; w: NumericMatrix; b: NumericVector }[]
+
+    const loadedLayers = new Set<number>()
+    const parameters: { layer: Layer; w: NumericMatrix; b: NumericVector }[] =
+      []
+
+    for (const { 𝓁, w, b } of savedLayers) {
+      if (loadedLayers.has(𝓁))
+        throw new Error(`Duplicate parameters for layer ${𝓁}`)
+
+      const layer = this.layers[𝓁]
+
+      if (layer === undefined) throw new Error(`Layer ${𝓁} not found`)
+
+      if (layer.isInputLayer)
+        throw new Error(`Cannot load parameters for input layer ${𝓁}`)
+
+      const previousSize = layer.previousLayer.size
+
+      if (
+        w.length !== layer.size ||
+        w.some(row => row.length !== previousSize)
+      )
+        throw new Error(
+          `Expected weights for layer ${𝓁} to be ${layer.size}x${previousSize} but got ${w.length}x${w[0]?.length ?? 0}`,
+        )
+
+      if (b.length !== layer.size)
+        throw new Error(
+          `Expected biases for layer ${𝓁} to have ${layer.size} values but got ${b.length}`,
+        )
+
+      parameters.push({ layer, w, b })
+      loadedLayers.add(𝓁)
+    }
+
+    for (let 𝓁 = 1; 𝓁 <= this.𝐋; 𝓁++)
+      if (!loadedLayers.has(𝓁))
+        throw new Error(`Missing parameters for layer ${𝓁}`)
+
+    for (const { layer, w, b } of parameters) {
+      layer.w = w
+      layer.b = b
+    }
   }
 }

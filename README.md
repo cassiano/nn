@@ -20,7 +20,7 @@ Built with **Deno** + **TypeScript** (fully type-checked, zero runtime deps).
 | Backpropagation (weight/bias update, mini-batch) | ✅ Done (`Network.backPropagate`)            |
 | Batch gradient averaging                         | ✅ Done (`Network.calculateAverageGradient`) |
 | XOR training + evaluation                        | ✅ Done (`src/xor.ts`)                       |
-| Weight/bias persistence (`Network.saveToDisk`)   | ✅ Done                                      |
+| Weight/bias persistence (`Network.saveToDisk`)   | ✅ Done (`Network.loadFromDisk` too)         |
 | Hyperparameter tuning / accuracy target          | 🔨 In progress                              |
 
 Both demos use the same `Network` class:
@@ -30,6 +30,9 @@ Both demos use the same `Network` class:
   `NMIST_EPOCHS` epochs (30 by default). Progress and the running accuracy are
   printed per batch while training, the test split is scored image by image at
   the end, and the trained weights are saved to `data/mnist_network.json`.
+  Passing `-l` starts from the weights and biases already in that file instead
+  of random ones, while `-s` skips training entirely and goes straight to the
+  test split (optionally with `-l` to test the saved parameters).
 - **XOR** (`src/xor.ts`) — the four-row gate fits in one batch, so every epoch
   is a single full-batch update. Training runs for `XOR_EPOCHS` epochs (50,000
   by default) and retries up to `XOR_RESTARTS` times with fresh random weights
@@ -43,6 +46,8 @@ Hyperparameters live in `src/constants.ts`.
 ```sh
 deno check src/mnist.ts src/xor.ts        # type-check all modules
 deno run --allow-read --allow-write src/mnist.ts  # train on MNIST, score the test split, save data/mnist_network.json
+deno run --allow-read --allow-write src/mnist.ts -l  # same, but start from the saved data/mnist_network.json
+deno run --allow-read --allow-write src/mnist.ts -s -l  # skip training and test the saved data/mnist_network.json
 deno run --allow-read --allow-write src/xor.ts    # train on XOR and print the truth table, save data/xor_network.json
 ```
 
@@ -96,8 +101,9 @@ network.cost // current squared error
 // One gradient step for the loaded sample.
 network.backPropagate(network.calculateGradient())
 
-// Persist the trainable layers (writes data/<filename>).
+// Persist the trainable layers (writes data/<filename>), then load them back.
 await network.saveToDisk('example_network.json')
+await network.loadFromDisk('example_network.json')
 ```
 
 ```ts
@@ -259,7 +265,10 @@ XOR hyperparameters:
    running epoch accuracy, always for the weights _before_ that batch's update.
 8. **Persistence** — both entry points finish by calling
    `Network.saveToDisk()`, writing the weights and biases as JSON to
-   `data/mnist_network.json` and `data/xor_network.json` respectively.
+   `data/mnist_network.json` and `data/xor_network.json` respectively. MNIST
+   can also start from a saved file with `-l`, which calls
+   `Network.loadFromDisk()` before training. With `-s` it skips training and
+   saves nothing, going straight to the test split.
 
 ### Notation used in the code
 
@@ -284,7 +293,10 @@ The MNIST entry point (formerly `src/main.ts`). Loads the dataset with
 `MnistLoader`, builds the 784 → 16 → 16 → 10 network from
 `NMIST_LAYER_CONFIG`, trains it with mini-batch gradient descent, saves
 `data/mnist_network.json`, and finally scores the held-out test split. Progress
-is logged per batch and every 1000th test image.
+is logged per batch and every 1000th test image. With `-l`, the initial weights
+and biases are loaded from `data/mnist_network.json` instead of being randomly
+initialized. With `-s`, training is skipped and the test split is scored
+immediately, using the loaded parameters when `-l` is also given.
 
 ### `src/xor.ts`
 
@@ -373,7 +385,8 @@ Ties layers together; owns the current sample's one-hot target `y`, exposes
 `calculateAverageGradient()` reduces a batch of them to a single mean gradient;
 `backPropagate()` applies that gradient, scaled by η and the network's
 `batchSize`, to every layer. `saveToDisk()` persists the trainable layers as
-JSON. Note that `calculateAverageGradient` pairs a batch up **by entry
+JSON, and `loadFromDisk()` restores them into a network built with the same
+topology. Note that `calculateAverageGradient` pairs a batch up **by entry
 position**, so every sample in a batch must list its layers in the same order —
 a sample that disagrees about a layer's `𝓁` at some position is rejected rather
 than averaged.
