@@ -11,11 +11,12 @@ import {
 } from './utils.ts'
 import {
   NumericVector,
-  NumericMatrix,
   InitialLayerData,
   GradientLayer,
   Gradient,
   NetworkOptions,
+  NetworkLayersInfo,
+  NetworkParameters,
 } from './types.ts'
 import { Layer } from './layer.ts'
 import { hadamardProduct, createVector, divideMatrixByScalar } from './utils.ts'
@@ -476,11 +477,10 @@ export class Network {
   async loadFromDisk(filename: string): Promise<void> {
     const savedLayers = JSON.parse(
       await Deno.readTextFile(`${import.meta.dirname}/../data/${filename}`),
-    ) as { 𝓁: number; w: NumericMatrix; b: NumericVector }[]
+    ) as NetworkLayersInfo
 
     const loadedLayers = new Set<number>()
-    const parameters: { layer: Layer; w: NumericMatrix; b: NumericVector }[] =
-      []
+    const parameters: NetworkParameters = []
 
     for (const { 𝓁, w, b } of savedLayers) {
       if (loadedLayers.has(𝓁))
@@ -495,10 +495,7 @@ export class Network {
 
       const previousSize = layer.previousLayer.size
 
-      if (
-        w.length !== layer.size ||
-        w.some(row => row.length !== previousSize)
-      )
+      if (w.length !== layer.size || w.some(row => row.length !== previousSize))
         throw new Error(
           `Expected weights for layer ${𝓁} to be ${layer.size}x${previousSize} but got ${w.length}x${w[0]?.length ?? 0}`,
         )

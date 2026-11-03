@@ -1,4 +1,4 @@
-import { ActivationFunctionType } from './layer.ts'
+import { ActivationFunctionType, Layer } from './layer.ts'
 
 /** A 2D array of numbers, shaped like the weight matrices (w) and the batch. */
 export type NumericMatrix = number[][]
@@ -62,3 +62,15 @@ export type GradientLayer = {
  * {@link Network.calculateGradient} produces them: output layer first.
  */
 export type Gradient = GradientLayer[]
+
+export type NetworkLayersInfo = {
+  𝓁: number
+  w: NumericMatrix
+  b: NumericVector
+}[]
+
+export type NetworkParameters = {
+  layer: Layer
+  w: NumericMatrix
+  b: NumericVector
+}[]
