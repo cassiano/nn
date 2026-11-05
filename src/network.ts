@@ -1,5 +1,4 @@
 import {
-  timesMap,
   transposeMatrix,
   addMatrices,
   multiplyMatrixByScalar,
@@ -17,10 +16,12 @@ import {
   NetworkOptions,
   NetworkLayersInfo,
   NetworkParameters,
+  CostFunctionType,
 } from './types.ts'
 import { Layer } from './layer.ts'
 import { hadamardProduct, createVector, divideMatrixByScalar } from './utils.ts'
 import { divideVectorByScalar, timesForEach } from './utils.ts'
+import { costDerivative, costValue } from './cost.ts'
 
 /**
  * A feedforward network made of an ordered list of {@link Layer}s, indexed by
@@ -47,6 +48,9 @@ export class Network {
 
   /** Whether biases are used in the network. */
   useBias: boolean
+
+  /** Cost minimized by training: squared error or cross-entropy. */
+  costFunction: CostFunctionType
 
   /**
    * Builds a network from a high-level description of each layer.
@@ -81,6 +85,7 @@ export class Network {
     options: NetworkOptions = {},
   ) {
     this.useBias = options.useBias ?? true
+    this.costFunction = options.costFunction ?? 'mse'
 
     for (const data of layersData) {
       const layer = new Layer(this, data.name, data.size, data.σ)
@@ -222,8 +227,9 @@ export class Network {
   }
 
   /**
-   * Squared error between the target and the output layer's activations:
-   * C = Σ(yᵢ - a(𝐋)ᵢ)².
+   * Cost between the target and the output layer's activations, selected by
+   * {@link Network.costFunction}: squared error C = Σ(yᵢ - a(𝐋)ᵢ)² or
+   * cross-entropy C = -Σ yᵢ·ln(a(𝐋)ᵢ).
    *
    * Unnormalized, which only rescales the gradient: the batch mean divides by
    * the batch size and the update multiplies it back, so η stays the per-sample
@@ -235,10 +241,7 @@ export class Network {
    * network.cost // 0
    */
   get cost(): number {
-    return timesMap(
-      this.outputLayer.a.length,
-      i => (this.y[i] - this.outputLayer.a[i]) ** 2,
-    ).reduce((acc, item) => acc + item)
+    return costValue(this.costFunction, this.y, this.outputLayer.a)
   }
 
   /**
@@ -272,11 +275,13 @@ export class Network {
    * parameter, by the chain rule, from 𝐋 back to 1. Per layer:
    *
    *   δ(𝓁) = ∂C/∂a(𝓁) ☉ σ'(z(𝓁))     ∂C/∂w(𝓁) = δ(𝓁)·a(𝓁-1)ᵀ
-   *   ∂C/∂a(𝐋) = 2·(a(𝐋) - y)          ∂C/∂b(𝓁) = δ(𝓁)
+   *   ∂C/∂a(𝐋) from the selected cost ∂C/∂b(𝓁) = δ(𝓁)
    *
-   * Inner layers take ∂C/∂a(𝓁) = w(𝓁+1)ᵀ·δ(𝓁+1) from the layer already visited,
-   * which is why the traversal runs backwards. Needs a loaded sample and a
-   * prior {@link Network.feedForward}.
+   * Softmax is not element-wise: its Jacobian replaces the ☉ σ' step. Composed
+   * with cross-entropy that collapses to δ = a - y. Inner layers take
+   * ∂C/∂a(𝓁) = w(𝓁+1)ᵀ·δ(𝓁+1) from the layer already visited, which is why
+   * the traversal runs backwards. Needs a loaded sample and a prior
+   * {@link Network.feedForward}.
    *
    * @returns One {@link GradientLayer} per trainable layer, output layer first.
    * Layers without an activation function are treated as linear, with σ' = 1.
@@ -295,13 +300,14 @@ export class Network {
     // [/doc_img/network.ts/2026-10-21-09-46-41.png]
     for (let 𝓁 = this.𝐋; 𝓁 >= 1; 𝓁--) {
       const layer = this.layers[𝓁]
-      const σDerivatives: NumericVector = layer.z.map(layer.σDerivativeFn)
 
       let costByActivationPartialDerivatives: NumericVector // ∂C/∂a
 
       if (layer.isOutputLayer) {
-        costByActivationPartialDerivatives = layer.a.map(
-          (activationValue, i) => 2 * (activationValue - this.y[i]),
+        costByActivationPartialDerivatives = costDerivative(
+          this.costFunction,
+          this.y,
+          layer.a,
         )
       } else {
         const nextLayer = layer.nextLayer
@@ -313,9 +319,9 @@ export class Network {
       }
 
       // [/doc_img/network.ts/2026-09-26-18-25-14.png]
-      layer.δ = hadamardProduct(
+      layer.δ = this.calculateDelta(
+        layer,
         costByActivationPartialDerivatives,
-        σDerivatives,
       )
 
       const gradientlayer: GradientLayer = {
@@ -328,6 +334,46 @@ export class Network {
     }
 
     return gradient
+  }
+
+  /**
+   * Converts ∂C/∂a(𝓁) into the error signal δ(𝓁) = ∂C/∂z(𝓁), applying the
+   * activation's derivative. Element-wise activations multiply by σ'(z), while
+   * softmax applies its full Jacobian because every output depends on every
+   * logit.
+   */
+  private calculateDelta(
+    layer: Layer,
+    costByActivationPartialDerivatives: NumericVector,
+  ): NumericVector {
+    if (layer.σ !== 'softmax')
+      return hadamardProduct(
+        costByActivationPartialDerivatives,
+        layer.z.map(layer.σDerivativeFn),
+      )
+
+    // For softmax composed with cross-entropy, the Jacobian simplifies to
+    // a·Σy - y. Using that form also avoids dividing by a probability that may
+    // have underflowed to zero.
+    if (layer.isOutputLayer && this.costFunction === 'cross-entropy') {
+      const targetSum = this.y.reduce((sum, value) => sum + value, 0)
+
+      return layer.a.map(
+        (activation, i) => activation * targetSum - this.y[i],
+      )
+    }
+
+    // δᵢ = aᵢ·(∂C/∂aᵢ - Σⱼ ∂C/∂aⱼ·aⱼ), the softmax Jacobian applied to ∂C/∂a.
+    const weightedSum = layer.a.reduce(
+      (sum, activation, i) =>
+        sum + activation * costByActivationPartialDerivatives[i],
+      0,
+    )
+
+    return layer.a.map(
+      (activation, i) =>
+        activation * (costByActivationPartialDerivatives[i] - weightedSum),
+    )
   }
 
   /**

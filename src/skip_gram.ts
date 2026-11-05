@@ -21,6 +21,7 @@ export function createSkipGramNetwork(
     outputSize: SKIP_GRAM_VOCAB_SIZE,
     batchSize,
     useBias: false,
+    costFunction: 'cross-entropy',
   })
 }
 
@@ -53,13 +54,6 @@ export function reinitializeNetworkWeights(
 export function getSkipGramPairs(): [number, number][] {
   const pairs = getWordPairs(SKIP_GRAM_WORDS, SKIP_GRAM_WINDOW_SIZE)
 
-  console.log('Word pairs:')
-  console.log(
-    pairs
-      .map(([i, j]) => `(${SKIP_GRAM_WORDS[i]}, ${SKIP_GRAM_WORDS[j]})`)
-      .join(' '),
-  )
-
   return pairs
 }
 
@@ -84,6 +78,13 @@ export function trainSkipGramNetwork(
 ): Network {
   const network = createSkipGramNetwork(η, batchSize)
   const pairs = getSkipGramPairs()
+
+  console.log('Word pairs:')
+  console.log(
+    pairs
+      .map(([i, j]) => `(${SKIP_GRAM_WORDS[i]}, ${SKIP_GRAM_WORDS[j]})`)
+      .join(' '),
+  )
 
   for (let epoch = 0; epoch < epochs; epoch++) {
     const shuffledPairs = [...pairs]

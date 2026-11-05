@@ -15,7 +15,7 @@ Built with **Deno** + **TypeScript** (fully type-checked, zero runtime deps).
 | MNIST loading + parsing                          | ✅ Done                                      |
 | Layer / Network classes                          | ✅ Done                                      |
 | Forward pass (`z = w·a + b`, activations)        | ✅ Done                                      |
-| Cost function (MSE)                              | ✅ Done                                      |
+| Cost function (MSE or cross-entropy)             | ✅ Done                                      |
 | Per-layer gradient (chain rule, single sample)   | ✅ Done                                      |
 | Backpropagation (weight/bias update, mini-batch) | ✅ Done (`Network.backPropagate`)            |
 | Batch gradient averaging                         | ✅ Done (`Network.calculateAverageGradient`) |
@@ -64,7 +64,7 @@ work from any working directory.
 ### Running the tests
 
 ```sh
-deno test --allow-read src/   # 184 tests across the whole suite
+deno test --allow-read src/   # 194 tests across the whole suite
 deno lint                     # type-lint the source and the tests
 ```
 
@@ -89,14 +89,19 @@ const network = new Network(
     { name: 'Output Layer', size: 2, σ: 'softmax' },
   ],
   0.5,
-  { inputSize: 2, outputSize: 2, batchSize: 4 },
+  {
+    inputSize: 2,
+    outputSize: 2,
+    batchSize: 4,
+    costFunction: 'cross-entropy', // or 'mse' (the default)
+  },
 )
 
 network.parameterCount // 22
 network.loadSample([0, 1], 1) // y = [0, 1]
 network.feedForward()
 network.predictedClass() // 0 or 1
-network.cost // current squared error
+network.cost // current cross-entropy
 
 // One gradient step for the loaded sample.
 network.backPropagate(network.calculateGradient())
@@ -162,11 +167,12 @@ gradientAsVector([
 │   ├── network.ts        # Network class — layers, sample loading, forward pass, cost, gradients, backprop
 │   ├── layer.ts          # Layer class — weights/bias, z/w/a computation, per-layer gradient
 │   ├── activation.ts     # Activation functions + derivatives (sigmoid, relu, tanh, softmax)
+│   ├── cost.ts           # MSE and cross-entropy costs + their ∂C/∂a derivatives
 │   ├── mnist_loader.ts   # IDX parsing of the MNIST dataset (+ ASCII image renderer)
 │   ├── types.ts          # Shared types (NumericVector, NumericMatrix, TrainingData, Gradient, …)
 │   ├── utils.ts          # Loop helpers, matrix ops, random, shuffle, assertions
 │   ├── constants.ts      # Hyperparameters and the network topology
-│   ├── tests/            # Automated test suite (184 tests) + shared test helpers
+│   ├── tests/            # Automated test suite (194 tests) + shared test helpers
 │   └── doc_img/          # Screenshots/diagrams referenced from the source comments
 ├── data/
 │   ├── mnist/               # The four zipped MNIST data files (the ones the loader reads)
@@ -245,12 +251,15 @@ XOR hyperparameters:
    each hidden/output layer 𝓁 computes its pre-activation
    `z(𝓁) = w(𝓁)·a(𝓁-1) + b(𝓁)` and applies its activation
    `a(𝓁) = σ(z(𝓁))`.
-3. **Cost** (`Network.cost`) — mean squared error between the softmax output
-   `a(𝐋)` and the target `y`. It sums the per-neuron terms with no 1/n
-   normalization, which only rescales the gradient.
+3. **Cost** (`Network.cost`) — squared error between the output `a(𝐋)` and the
+   target `y`, or cross-entropy when `costFunction: 'cross-entropy'` is set. It
+   sums the per-neuron terms with no 1/n normalization, which only rescales the
+   gradient.
 4. **Per-sample gradient** (`Network.calculateGradient`) — walks the layers from
    𝐋 back to 1, propagating the error signal
    `δ(𝓁) = ∂C/∂a(𝓁) · σ'(z(𝓁))` and collecting `∂C/∂w(𝓁)` and `∂C/∂b(𝓁)`.
+   Softmax uses its full Jacobian instead of the element-wise `σ'`; combined
+   with cross-entropy that simplifies to `δ = a - y`.
 5. **Batch mean** (`Network.calculateAverageGradient`) — one mean gradient per
    batch, each sample weighted 1/60.
 6. **Weight update** (`Network.backPropagate`) — steps every layer against that
@@ -278,7 +287,7 @@ XOR hyperparameters:
 - `a` — activations
 - `σ` — activation function; `η` — learning rate
 - `y` — expected/one-hot output for the current sample
-- `C` — cost (MSE)
+- `C` — cost (MSE by default, or cross-entropy)
 
 Unicode identifiers (`𝓁`, `σ`, `η`, `𝐋`) are used deliberately to keep
 equations in code close to their written math form.
@@ -367,7 +376,17 @@ Pure activation functions and their derivatives (derivatives take the
 pre-activation `z`, as needed for backprop):
 sigmoid, ReLU, tanh and softmax, each numerically stable (sigmoid/softmax
 avoid overflow/underflow on extreme inputs). `softmax` reports a constant
-derivative of 1, so the output layer's δ stays the plain ∂C/∂a.
+element-wise derivative of 1; `Network.calculateGradient` applies its full
+Jacobian instead.
+
+### `src/cost.ts`
+
+Pure cost functions and their derivatives with respect to the output
+activations: `meanSquaredError` / `meanSquaredErrorDerivative` and
+`crossEntropy` / `crossEntropyDerivative`. `costValue` and `costDerivative`
+dispatch on the network's `costFunction` option (`'mse'` by default, or
+`'cross-entropy'`). Both costs are summed, with no 1/n factor, so switching
+between them does not change the meaning of the learning rate.
 
 ### `src/layer.ts`
 
@@ -380,7 +399,8 @@ for the current sample; the partial derivatives `∂C/∂w`, `∂C/∂b` are bui
 ### `src/network.ts`
 
 Ties layers together; owns the current sample's one-hot target `y`, exposes
-`inputLayer` / `outputLayer`, drives the forward pass, and computes the cost.
+`inputLayer` / `outputLayer`, drives the forward pass, and computes the cost
+selected by `costFunction`.
 `calculateGradient()` returns one `GradientLayer` per trainable layer;
 `calculateAverageGradient()` reduces a batch of them to a single mean gradient;
 `backPropagate()` applies that gradient, scaled by η and the network's

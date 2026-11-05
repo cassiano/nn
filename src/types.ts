@@ -29,6 +29,9 @@ export type InitialLayerData = {
   σ?: ActivationFunctionType
 }
 
+/** The cost function a network minimizes: squared error or cross-entropy. */
+export type CostFunctionType = 'mse' | 'cross-entropy'
+
 /**
  * Optional settings for a {@link Network}: what shape of data it will see, and
  * how many samples each weight update averages over. Everything is optional, so
@@ -38,12 +41,14 @@ export type InitialLayerData = {
  * @property outputSize - expected number of outputs (classes), checked against the output layer
  * @property batchSize - number of samples whose gradients are averaged into one update
  * @property useBias - whether to use biases (default true)
+ * @property costFunction - cost to minimize, `'mse'` (default) or `'cross-entropy'`
  */
 export type NetworkOptions = {
   inputSize?: number
   outputSize?: number
   batchSize?: number
   useBias?: boolean
+  costFunction?: CostFunctionType
 }
 
 /**

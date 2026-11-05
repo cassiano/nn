@@ -93,6 +93,35 @@ function numericPartial(
   return (perturbed - base) / (2 * delta)
 }
 
+/**
+ * Checks every weight and bias in `layers` against central differences of
+ * {@link Network.cost}, for whichever cost function the network is using.
+ *
+ * @param net A network whose sample is loaded and whose forward pass has run.
+ * @param layers The layers whose parameters should be checked.
+ * @param eps Maximum allowed absolute difference.
+ */
+function assertGradientMatchesNumeric(
+  net: Network,
+  layers: Layer[],
+  eps = 1e-4,
+): void {
+  const gradient = new Map(
+    net.calculateGradient().map(entry => [entry.𝓁, entry]),
+  )
+
+  for (const layer of layers) {
+    const { w, b } = gradient.get(layer.𝓁)!
+
+    for (let row = 0; row < layer.w.length; row++) {
+      for (let col = 0; col < layer.w[row].length; col++)
+        assertClose(w[row][col], numericPartial(net, layer, row, col), eps)
+
+      assertClose(b[row], numericPartial(net, layer, row, null), eps)
+    }
+  }
+}
+
 Deno.test('Network / constructor builds the expected topology', () => {
   const net = makeStandardNetwork()
   assertEquals(net.layers.length, 4)
@@ -194,6 +223,58 @@ Deno.test('Network / cost tracks manual values on a tiny network', () => {
   net.y = [1, 0]
   assertClose(net.cost, (1 - 0.25) ** 2 + (0 - 0.75) ** 2, 1e-12)
 })
+
+Deno.test('Network / cost defaults to MSE and can select cross-entropy', () => {
+  const net = makeTinyNetwork()
+  net.y = [0, 1]
+  net.outputLayer.a = [0.2, 0.8]
+
+  assertEquals(net.costFunction, 'mse')
+  assertClose(net.cost, 0.2 ** 2 + 0.2 ** 2, 1e-12)
+
+  net.costFunction = 'cross-entropy'
+  assertClose(net.cost, -Math.log(0.8), 1e-12)
+
+  const configured = new Network(
+    [
+      { name: 'input', size: 2 },
+      { name: 'output', size: 2, σ: 'softmax' },
+    ],
+    0.01,
+    { costFunction: 'cross-entropy' },
+  )
+  assertEquals(configured.costFunction, 'cross-entropy')
+})
+
+Deno.test(
+  'Network / softmax output gradient matches numerical differentiation for both costs',
+  () => {
+    // Softmax couples the output neurons, so its full Jacobian must be applied
+    // instead of an element-wise σ'. With cross-entropy the combination
+    // simplifies to δ = a - y; with MSE the Jacobian remains explicit.
+    for (const costFunction of ['mse', 'cross-entropy'] as const) {
+      const net = makeTinyNetwork('sigmoid', 'softmax')
+      const [input, hidden, output] = net.layers
+
+      net.costFunction = costFunction
+      input.a = [0.5, 0.9]
+      hidden.w = [
+        [0.7, -0.2],
+        [0.1, 0.4],
+      ]
+      hidden.b = [0.1, -0.3]
+      output.w = [
+        [1, 0.5],
+        [-0.5, 2],
+      ]
+      output.b = [0.2, -0.1]
+      net.y = [1, 0]
+      net.feedForward()
+
+      assertGradientMatchesNumeric(net, [hidden, output])
+    }
+  },
+)
 
 Deno.test('Network / feedForward propagates hand-computable values', () => {
   const net = makeTinyNetwork()
@@ -352,23 +433,7 @@ Deno.test(
     net.y = [1, 0]
     net.feedForward()
 
-    const gradient = net.calculateGradient()
-    const byLayer = new Map(gradient.map(entry => [entry.𝓁, entry]))
-
-    for (const layer of [hidden, output]) {
-      const { w, b } = byLayer.get(layer.𝓁)!
-
-      for (let row = 0; row < layer.w.length; row++) {
-        for (let col = 0; col < layer.w[row].length; col++)
-          assertClose(
-            w[row][col],
-            numericPartial(net, layer, row, col),
-            1e-4,
-          )
-
-        assertClose(b[row], numericPartial(net, layer, row, null), 1e-4)
-      }
-    }
+    assertGradientMatchesNumeric(net, [hidden, output])
   },
 )
 
