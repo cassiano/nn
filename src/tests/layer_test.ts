@@ -128,21 +128,22 @@ Deno.test('Layer / softmax output produces a probability distribution', () => {
 })
 
 Deno.test(
-  'Layer / forward pass throws when no activation is configured',
+  'Layer / forward pass is linear when no activation is configured',
   () => {
     const net = makeTinyNetworkWithoutActivation()
     const [input, hidden] = net.layers
-    input.a = [1, 1]
+    input.a = [1, 2]
     hidden.w = [
       [1, 0],
       [0, 1],
     ]
-    hidden.b = [0, 0]
+    hidden.b = [0.5, -0.5]
 
-    assertThrows(
-      () => hidden.calculatePostActivationValues(),
-      'activation function to be defined',
-    )
+    hidden.calculatePostActivationValues()
+
+    // Without σ the layer keeps z unchanged: a = z.
+    assertArrayClose(hidden.z, [1.5, 1.5], 1e-12)
+    assertArrayClose(hidden.a, hidden.z, 1e-12)
   },
 )
 
@@ -174,13 +175,14 @@ Deno.test('Layer / σDerivativeFn reports a constant 1 for softmax', () => {
   assertEquals(output.σDerivativeFn(123), 1)
 })
 
-Deno.test('Layer / σDerivativeFn throws when σ is not configured', () => {
+Deno.test('Layer / σDerivativeFn reports a constant 1 without σ', () => {
+  // A layer without σ is linear, so its derivative is 1 everywhere.
   const net = makeTinyNetworkWithoutActivation()
+  const hidden = net.layers[1]
 
-  assertThrows(
-    () => net.layers[1].σDerivativeFn,
-    'Expected activation function to be defined',
-  )
+  assertEquals(hidden.σDerivativeFn(0), 1)
+  assertEquals(hidden.σDerivativeFn(-7.5), 1)
+  assertEquals(hidden.σDerivativeFn(123), 1)
 })
 
 Deno.test('Layer / previousLayer and nextLayer resolve the neighbours', () => {

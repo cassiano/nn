@@ -45,6 +45,9 @@ export class Network {
    */
   batchSize: number
 
+  /** Whether biases are used in the network. */
+  useBias: boolean
+
   /**
    * Builds a network from a high-level description of each layer.
    *
@@ -77,6 +80,8 @@ export class Network {
     public η: number, // Learning rate (greek letter eta)
     options: NetworkOptions = {},
   ) {
+    this.useBias = options.useBias ?? true
+
     for (const data of layersData) {
       const layer = new Layer(this, data.name, data.size, data.σ)
 
@@ -197,7 +202,8 @@ export class Network {
 
     this.inputLayer.a = inputs
 
-    this.y = timesMap(this.outputLayer.size, i => (i === label ? 1 : 0))
+    this.y = Array(this.outputLayer.size).fill(0)
+    this.y[label] = 1
   }
 
   /**
@@ -273,7 +279,7 @@ export class Network {
    * prior {@link Network.feedForward}.
    *
    * @returns One {@link GradientLayer} per trainable layer, output layer first.
-   * @throws If a layer is missing its activation function, needed for σ'.
+   * Layers without an activation function are treated as linear, with σ' = 1.
    *
    * @example
    * network.loadSample([0, 1], 1)
@@ -315,7 +321,7 @@ export class Network {
       const gradientlayer: GradientLayer = {
         𝓁,
         w: outerProduct(layer.δ, layer.previousLayer.a), // [/doc_img/network.ts/2026-09-26-18-21-20.png]
-        b: [...layer.δ], // [/doc_img/network.ts/2026-09-26-18-21-43.png]
+        b: this.useBias ? [...layer.δ] : [], // [/doc_img/network.ts/2026-09-26-18-21-43.png]
       }
 
       gradient.push(gradientlayer)
@@ -362,10 +368,14 @@ export class Network {
         multiplyMatrixByScalar(w, -this.η * this.batchSize),
       )
 
-      layer.b = addVectors(
-        layer.b,
-        multiplyVectorByScalar(b, -this.η * this.batchSize),
-      )
+      if (this.useBias && b && b.length > 0) {
+        if (!layer.b || layer.b.length === 0) layer.b = Array(b.length).fill(0)
+
+        layer.b = addVectors(
+          layer.b,
+          multiplyVectorByScalar(b, -this.η * this.batchSize),
+        )
+      }
     }
   }
 
@@ -404,8 +414,8 @@ export class Network {
 
       // Accumulate in place: a fresh matrix/vector per sample would allocate
       // hundreds of thousands of cells per batch for the 784-wide first layer.
-      const summedW = createMatrix(w.length, w[0].length, 0)
-      const summedB = createVector(b.length, 0)
+      const summedW = createMatrix(w.length, w[0]?.length ?? 0, 0)
+      const summedB = b && b.length > 0 ? createVector(b.length, 0) : []
 
       for (const gradient of gradients) {
         const layer = gradient[layerIdx]
@@ -421,13 +431,18 @@ export class Network {
             summedRow[col] += layerRow[col]
         }
 
-        for (let i = 0; i < summedB.length; i++) summedB[i] += layer.b[i]
+        if (summedB.length > 0 && layer.b && layer.b.length > 0) {
+          for (let i = 0; i < summedB.length; i++) summedB[i] += layer.b[i]
+        }
       }
 
       const averageGradientLayer: GradientLayer = {
         𝓁,
         w: divideMatrixByScalar(summedW, gradients.length),
-        b: divideVectorByScalar(summedB, gradients.length),
+        b:
+          summedB.length > 0
+            ? divideVectorByScalar(summedB, gradients.length)
+            : [],
       }
 
       averageGradient.push(averageGradientLayer)
@@ -450,9 +465,11 @@ export class Network {
     await Deno.writeTextFile(
       `${import.meta.dirname}/../data/${filename}`,
       JSON.stringify(
-        this.layers
-          .slice(1)
-          .map(layer => ({ 𝓁: layer.𝓁, w: layer.w, b: layer.b })),
+        this.layers.slice(1).map(layer => ({
+          𝓁: layer.𝓁,
+          w: layer.w,
+          b: this.useBias && layer.b ? layer.b : [],
+        })),
         null,
         2,
       ),
@@ -500,12 +517,14 @@ export class Network {
           `Expected weights for layer ${𝓁} to be ${layer.size}x${previousSize} but got ${w.length}x${w[0]?.length ?? 0}`,
         )
 
-      if (b.length !== layer.size)
-        throw new Error(
-          `Expected biases for layer ${𝓁} to have ${layer.size} values but got ${b.length}`,
-        )
+      if (this.useBias) {
+        if (!b || b.length !== layer.size)
+          throw new Error(
+            `Expected biases for layer ${𝓁} to have ${layer.size} values but got ${b?.length ?? 0}`,
+          )
+      }
 
-      parameters.push({ layer, w, b })
+      parameters.push({ layer, w, b: b || [] })
       loadedLayers.add(𝓁)
     }
 
@@ -515,7 +534,7 @@ export class Network {
 
     for (const { layer, w, b } of parameters) {
       layer.w = w
-      layer.b = b
+      layer.b = this.useBias ? b : []
     }
   }
 }

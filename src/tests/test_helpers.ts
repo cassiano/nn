@@ -85,12 +85,11 @@ export function makeTinyNetwork(
 }
 
 /**
- * A 2 -> 2 -> 2 network whose hidden layer has no σ, for exercising the
- * "activation function required" error paths.
+ * A 2 -> 2 -> 2 network whose hidden layer has no σ, making it linear.
  *
  * @param σOutput Activation for the output layer, or `undefined` for none.
  * Defaults to `'sigmoid'`.
- * @returns A {@link Network} with an activation-less hidden layer.
+ * @returns A {@link Network} with an activation-less (linear) hidden layer.
  */
 export function makeTinyNetworkWithoutActivation(
   σOutput: ActivationFunctionType | undefined = 'sigmoid',

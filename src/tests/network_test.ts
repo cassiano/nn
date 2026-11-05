@@ -329,38 +329,46 @@ Deno.test('Network / gradient partials are finite and defined', () => {
 })
 
 Deno.test(
-  'Network / calculateGradient throws when a layer has no activation',
+  'Network / calculateGradient treats layers without activation as linear',
   () => {
-    // σDerivativeFn is read for every layer, so a missing σ is rejected whether it
-    // sits on the output layer or an inner one. Deliberately no feedForward() call:
-    // the forward pass would reject the same missing σ first, and this targets the
-    // gradient's own error path.
-    //
-    // Note makeTinyNetworkWithoutActivation's σ argument defaults to 'sigmoid', so
-    // passing undefined would just select that default; σ is cleared afterwards.
-    const withoutOutput = makeTinyNetworkWithoutActivation()
-    withoutOutput.layers[0].a = [1, 1]
-    withoutOutput.outputLayer.σ = undefined
-    withoutOutput.y = [1, 0]
-    assertThrows(
-      () => withoutOutput.calculateGradient(),
-      'Expected activation function to be defined',
-    )
+    // A missing σ means the layer is linear, so σ' = 1 and δ is the plain
+    // ∂C/∂a. Clearing σ on both trainable layers checks that the gradient walk
+    // handles it at the output layer and at an inner one.
+    const net = makeTinyNetworkWithoutActivation()
+    const [input, hidden, output] = net.layers
+    input.a = [0.5, -0.3]
+    hidden.w = [
+      [0.7, -0.2],
+      [0.1, 0.4],
+    ]
+    hidden.b = [0.1, -0.3]
+    output.w = [
+      [1, 0.5],
+      [-0.5, 2],
+    ]
+    output.b = [0.2, -0.1]
+    hidden.σ = undefined
+    output.σ = undefined
+    net.y = [1, 0]
+    net.feedForward()
 
-    // Here the output layer is fine, so the walk has to reach the σ-less hidden
-    // layer. Its a is filled in by hand along with the output layer's z and a, so
-    // the output layer's own partials can be computed before the failure.
-    const withoutHidden = makeTinyNetworkWithoutActivation()
-    const [input, hidden, output] = withoutHidden.layers
-    input.a = [1, 1]
-    hidden.a = [0.5, 0.5]
-    output.z = [0.5, -0.5]
-    output.a = [0.6, 0.4]
-    withoutHidden.y = [1, 0]
-    assertThrows(
-      () => withoutHidden.calculateGradient(),
-      'Expected activation function to be defined',
-    )
+    const gradient = net.calculateGradient()
+    const byLayer = new Map(gradient.map(entry => [entry.𝓁, entry]))
+
+    for (const layer of [hidden, output]) {
+      const { w, b } = byLayer.get(layer.𝓁)!
+
+      for (let row = 0; row < layer.w.length; row++) {
+        for (let col = 0; col < layer.w[row].length; col++)
+          assertClose(
+            w[row][col],
+            numericPartial(net, layer, row, col),
+            1e-4,
+          )
+
+        assertClose(b[row], numericPartial(net, layer, row, null), 1e-4)
+      }
+    }
   },
 )
 

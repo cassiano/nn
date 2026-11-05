@@ -91,9 +91,11 @@ export class Layer {
    * network.layers[1].parameterCount // 12
    */
   get parameterCount(): number {
-    return this.isInputLayer
-      ? 0
-      : this.w.length * (this.w[0]?.length ?? 0) + this.b.length
+    if (this.isInputLayer) return 0
+
+    const biasCount = this.network.useBias && this.b ? this.b.length : 0
+
+    return this.w.length * (this.w[0]?.length ?? 0) + biasCount
   }
 
   /**
@@ -143,7 +145,8 @@ export class Layer {
    * layer, then a by applying σ.
    *
    * @returns Nothing; {@link Layer.z} and {@link Layer.a} are updated in place.
-   * @throws If σ is missing, or if the incoming dimensions do not line up.
+   * A missing σ leaves the layer linear, with `a = z`.
+   * @throws If the incoming dimensions do not line up.
    *
    * @example
    * network.inputLayer.a = [0.5, 0.9]
@@ -152,25 +155,29 @@ export class Layer {
    */
   calculatePostActivationValues(): void {
     this.calculatePreActivationValues()
-    this.applyActivationFunction()
+
+    if (this.σ !== undefined) {
+      this.applyActivationFunction()
+    } else {
+      this.a = [...this.z]
+    }
   }
 
   /**
    * The derivative σ' of this layer's activation, as a function of z, used to
    * build δ. Softmax reports a constant 1, leaving δ as the plain ∂C/∂a.
    *
-   * @returns The derivative of this layer's activation.
-   * @throws If σ is missing.
+   * @returns The derivative of this layer's activation, or a constant 1 when σ
+   * is missing (a linear layer).
    *
    * @example
    * const sigmoidLayer = network.layers[1] // σ: 'sigmoid'
    * sigmoidLayer.σDerivativeFn(0) // 0.25
    */
   get σDerivativeFn(): (z: number) => number {
-    if (this.σ === undefined)
-      throw new Error(`Expected activation function to be defined`)
-
     switch (this.σ) {
+      case undefined:
+        return () => 1
       case 'sigmoid':
         return sigmoidDerivative
       case 'relu':
@@ -195,7 +202,10 @@ export class Layer {
     this.w = createMatrix(this.size, this.previousLayer.size, () =>
       random(-1, 1),
     )
-    this.b = createVector(this.size, () => random(-1, 1))
+
+    this.b = this.network.useBias
+      ? createVector(this.size, () => random(-1, 1))
+      : []
   }
 
   /**
@@ -205,10 +215,12 @@ export class Layer {
    * @throws If w, b and the previous layer's `a` disagree on their dimensions.
    */
   private calculatePreActivationValues(): void {
-    this.z = addVectors(
-      multiplyMatrixByVector(this.w, this.previousLayer.a),
-      this.b,
-    )
+    const z = multiplyMatrixByVector(this.w, this.previousLayer.a)
+
+    this.z =
+      this.network.useBias && this.b && this.b.length > 0
+        ? addVectors(z, this.b)
+        : z
   }
 
   /**

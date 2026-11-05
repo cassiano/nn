@@ -37,11 +37,13 @@ export type InitialLayerData = {
  * @property inputSize - expected number of inputs, checked against the input layer
  * @property outputSize - expected number of outputs (classes), checked against the output layer
  * @property batchSize - number of samples whose gradients are averaged into one update
+ * @property useBias - whether to use biases (default true)
  */
 export type NetworkOptions = {
   inputSize?: number
   outputSize?: number
   batchSize?: number
+  useBias?: boolean
 }
 
 /**

@@ -313,14 +313,14 @@ export const createMatrix = (
  */
 export const createVector = (
   size: number,
-  initialValueOrFn: number | (() => number),
+  initialValueOrFn: number | ((value: number) => number),
 ): NumericVector => {
   const result: NumericVector = new Array(size)
 
   for (let i = 0; i < size; i++) {
     result[i] =
       typeof initialValueOrFn === 'function'
-        ? initialValueOrFn()
+        ? initialValueOrFn(i)
         : initialValueOrFn
   }
 
@@ -760,4 +760,34 @@ export const gradientAsVector = (gradient: Gradient): NumericVector => {
   const sortedGradient = gradient.toSorted((left, right) => left.𝓁 - right.𝓁)
 
   return sortedGradient.flatMap(layer => [...layer.w.flat(2), ...layer.b])
+}
+
+/**
+ * Generates skip-gram word pairs from a list of words using a sliding window.
+ * For each word at index i, creates pairs with all other words j within
+ * windowSize positions.
+ *
+ * @param words The list of words in order.
+ * @param windowSize The number of words to look at on each side of the center word.
+ * @returns Array of [centerIndex, contextIndex] pairs.
+ *
+ * @example
+ * getWordPairs(['The', 'quick', 'brown', 'fox', 'jumps'], 3)
+ * // => [[0,1],[0,2],[0,3],[1,0],[1,2],[1,3],[1,4],...]
+ */
+export const getWordPairs = (
+  words: string[],
+  windowSize: number,
+): [number, number][] => {
+  const pairs: [number, number][] = []
+
+  for (let i = 0; i < words.length; i++)
+    for (
+      let j = Math.max(0, i - windowSize);
+      j < Math.min(words.length, i + windowSize + 1);
+      j++
+    )
+      if (j !== i) pairs.push([i, j])
+
+  return pairs
 }

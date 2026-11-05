@@ -33,3 +33,21 @@ export const XOR_LEARNING_RATE = 0.5 // η, the learning rate
 export const XOR_EPOCHS = 50000
 export const XOR_BATCH_SIZE = 4 // the whole gate fits in one batch
 export const XOR_RESTARTS = 5 // fresh random weights, in case a run stalls
+
+export const SKIP_GRAM_WORDS = `
+  the quick brown fox jumps over the lazy dog
+`
+  .trim()
+  .split(/\s+/)
+export const SKIP_GRAM_VOCAB_SIZE = SKIP_GRAM_WORDS.length
+export const SKIP_GRAM_WINDOW_SIZE = 3
+export const SKIP_GRAM_EMBEDDING_SIZE = 30
+export const SKIP_GRAM_LEARNING_RATE = 0.01
+export const SKIP_GRAM_EPOCHS = 50_000
+export const SKIP_GRAM_BATCH_SIZE = 1
+
+export const SKIP_GRAM_LAYER_CONFIG: InitialLayerData[] = [
+  { name: 'Input Layer', size: SKIP_GRAM_VOCAB_SIZE },
+  { name: 'Hidden Layer', size: SKIP_GRAM_EMBEDDING_SIZE },
+  { name: 'Output Layer', size: SKIP_GRAM_VOCAB_SIZE, σ: 'softmax' },
+]

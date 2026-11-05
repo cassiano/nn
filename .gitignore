@@ -1,2 +1,3 @@
 data/mnist_network.json
 data/xor_network.json
+data/skip_gram_network.json
